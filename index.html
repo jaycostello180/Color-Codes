@@ -20,6 +20,14 @@
             background: rgba(0, 255, 255, 0.1);
             padding: 15px;
             border: 1px solid cyan;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .input-area:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
         }
         
         .color-preview {
@@ -27,6 +35,14 @@
             height: 50px;
             border: 1px solid cyan;
             margin-right: 10px;
+            border-radius: 5px;
+            transition: all 0.5s ease;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
+        }
+        
+        .color-preview:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
         
         input {
@@ -36,6 +52,13 @@
             padding: 10px;
             margin-right: 10px;
             font-family: monospace;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            outline: none;
         }
         
         button {
@@ -46,6 +69,18 @@
             cursor: pointer;
             font-family: monospace;
             text-transform: uppercase;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(1px);
         }
         
         .view-controls {
@@ -62,17 +97,27 @@
             padding: 8px 15px;
             cursor: pointer;
             font-family: monospace;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        
+        .view-btn:hover {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            transform: translateY(-2px);
         }
         
         .view-btn.active {
             background: cyan;
             color: black;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
         }
         
         /* Color grid view styles */
         .color-grid {
             display: flex;
             flex-wrap: wrap;
+            gap: 5px;
+            transition: all 0.5s ease;
         }
         
         .color-square {
@@ -82,15 +127,23 @@
             position: relative;
             margin: 0;
             overflow: hidden; /* For info overlay */
+            border-radius: 3px;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
         }
         
         .color-square:hover {
-            transform: scale(1.1);
+            transform: scale(1.2);
             z-index: 10;
-            box-shadow: 0 0 10px white;
+            box-shadow: 0 0 15px white;
         }
         
-        /* New: Color info overlay */
+        /* Color info overlay */
         .color-info {
             position: absolute;
             bottom: 0;
@@ -114,6 +167,7 @@
             position: relative;
             height: 300px;
             margin: 80px 0 40px 0;
+            transition: all 0.5s ease;
         }
         
         .timeline-line {
@@ -123,6 +177,13 @@
             right: 0;
             height: 2px;
             background-color: cyan;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            animation: glow 2s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+            to { box-shadow: 0 0 15px rgba(0, 255, 255, 0.7); }
         }
         
         .timeline-marker {
@@ -135,6 +196,13 @@
             cursor: pointer;
             border: 1px solid white;
             transition: all 0.3s ease;
+            animation: pulseIn 0.5s ease-out;
+        }
+        
+        @keyframes pulseIn {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
         
         .timeline-marker:hover {
@@ -161,6 +229,11 @@
             border: 1px solid rgba(0, 255, 255, 0.3);
             height: 500px;
             position: relative;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            transition: all 0.5s ease;
+            animation: fadeIn 0.8s ease-out;
         }
         
         .map-region {
@@ -170,6 +243,12 @@
             align-content: flex-start;
             padding: 2px;
             position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .map-region:hover {
+            background: rgba(0, 255, 255, 0.05);
+            z-index: 5;
         }
         
         .map-region-name {
@@ -179,6 +258,13 @@
             font-size: 8px;
             opacity: 0.7;
             pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        
+        .map-region:hover .map-region-name {
+            opacity: 1;
+            color: white;
+            text-shadow: 0 0 5px cyan;
         }
         
         .map-color {
@@ -187,6 +273,14 @@
             margin: 2px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             transition: transform 0.2s ease;
+            border-radius: 2px;
+            animation: popIn 0.3s ease-out;
+        }
+        
+        @keyframes popIn {
+            from { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            to { transform: scale(1); }
         }
         
         .map-color:hover {
@@ -201,6 +295,7 @@
             flex-wrap: wrap;
             gap: 30px;
             justify-content: center;
+            transition: all 0.5s ease;
         }
         
         .color-group {
@@ -209,6 +304,19 @@
             padding: 15px;
             border-radius: 5px;
             max-width: 200px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .color-group:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            transform: translateY(-5px);
         }
         
         .color-group-title {
@@ -216,6 +324,7 @@
             margin-bottom: 10px;
             text-align: center;
             color: cyan;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
         }
         
         .group-colors {
@@ -230,6 +339,9 @@
             height: 30px;
             cursor: pointer;
             transition: transform 0.2s ease;
+            border-radius: 3px;
+            animation: popIn 0.3s ease-out;
+            animation-delay: calc(var(--index) * 0.05s);
         }
         
         .group-color:hover {
@@ -242,13 +354,83 @@
         .stats {
             margin-top: 20px;
             text-align: center;
+            font-size: 18px;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            animation: glow 1.5s infinite alternate;
+        }
+        
+        /* Format toggle */
+        .format-toggle {
+            display: flex;
+            align-items: center;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .format-toggle label {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        
+        select {
+            background: black;
+            color: cyan;
+            border: 1px solid cyan;
+            padding: 5px;
+            font-family: monospace;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        
+        select:focus {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            outline: none;
+        }
+        
+        /* Success notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 255, 255, 0.2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            transform: translateX(200%);
+            transition: transform 0.5s ease;
+            z-index: 100;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        /* Color addition effect */
+        .color-added {
+            animation: colorPulse 1s;
+        }
+        
+        @keyframes colorPulse {
+            0% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+            50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.8); }
+            100% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
         }
     </style>
 </head>
 <body>
     <div class="input-area">
         <div id="preview" class="color-preview"></div>
-        <input type="text" id="color-code" placeholder="ENTER HEX CODE" maxlength="6">
+        <input type="text" id="color-code" placeholder="ENTER COLOR CODE">
+        <div class="format-toggle">
+            <label for="format-select">Format:</label>
+            <select id="format-select">
+                <option value="hex">HEX</option>
+                <option value="valspar">VALSPAR</option>
+                <option value="nissan">NISSAN</option>
+                <option value="auto">AUTO-DETECT</option>
+            </select>
+        </div>
         <button id="add-btn">ADD COLOR</button>
     </div>
     
@@ -266,38 +448,57 @@
         <span id="count">0</span> COLORS IN COLLECTIVE
     </div>
     
+    <div class="notification" id="notification">Color added to collective!</div>
+    
     <script>
         // Enhanced color collection with metadata
         const colors = [
-            { hex: "#FF0000", name: "Red", dateAdded: new Date(2025, 0, 1), location: { x: 0.2, y: 0.3, name: "Downtown" } },
-            { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), location: { x: 0.3, y: 0.4, name: "Market Street" } },
-            { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), location: { x: 0.4, y: 0.5, name: "Sunny Hills" } },
-            { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), location: { x: 0.5, y: 0.6, name: "Park District" } },
-            { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" } },
-            { hex: "#4B0082", name: "Indigo", dateAdded: new Date(2025, 0, 11), location: { x: 0.7, y: 0.3, name: "Arts District" } },
-            { hex: "#9400D3", name: "Violet", dateAdded: new Date(2025, 0, 13), location: { x: 0.8, y: 0.2, name: "Historic Quarter" } },
-            { hex: "#FF1493", name: "Deep Pink", dateAdded: new Date(2025, 0, 15), location: { x: 0.6, y: 0.1, name: "Fashion District" } },
-            { hex: "#00FFFF", name: "Cyan", dateAdded: new Date(2025, 0, 17), location: { x: 0.5, y: 0.2, name: "Tech Hub" } },
-            { hex: "#FFD700", name: "Gold", dateAdded: new Date(2025, 0, 19), location: { x: 0.4, y: 0.3, name: "Financial District" } },
-            { hex: "#32CD32", name: "Lime Green", dateAdded: new Date(2025, 0, 21), location: { x: 0.3, y: 0.5, name: "Green Valley" } },
-            { hex: "#BA55D3", name: "Medium Orchid", dateAdded: new Date(2025, 0, 23), location: { x: 0.2, y: 0.6, name: "Garden District" } },
-            { hex: "#FF4500", name: "Orange Red", dateAdded: new Date(2025, 0, 25), location: { x: 0.1, y: 0.7, name: "Sunset Boulevard" } },
-            { hex: "#2E8B57", name: "Sea Green", dateAdded: new Date(2025, 0, 27), location: { x: 0.3, y: 0.8, name: "Harbor View" } },
-            { hex: "#D2691E", name: "Chocolate", dateAdded: new Date(2025, 0, 29), location: { x: 0.5, y: 0.9, name: "Cafe Street" } },
-            { hex: "#DC143C", name: "Crimson", dateAdded: new Date(2025, 1, 1), location: { x: 0.7, y: 0.8, name: "Theater District" } },
-            { hex: "#00BFFF", name: "Deep Sky Blue", dateAdded: new Date(2025, 1, 3), location: { x: 0.9, y: 0.7, name: "Skyline Avenue" } },
-            { hex: "#FF00FF", name: "Magenta", dateAdded: new Date(2025, 1, 5), location: { x: 0.8, y: 0.6, name: "Neon Street" } },
-            { hex: "#1E90FF", name: "Dodger Blue", dateAdded: new Date(2025, 1, 7), location: { x: 0.7, y: 0.5, name: "Sports Complex" } },
-            { hex: "#F4A460", name: "Sandy Brown", dateAdded: new Date(2025, 1, 9), location: { x: 0.6, y: 0.3, name: "Beach Front" } }
+            { hex: "#FF0000", name: "Red", dateAdded: new Date(2025, 0, 1), location: { x: 0.2, y: 0.3, name: "Downtown" }, originalCode: "FF0000" },
+            { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), location: { x: 0.3, y: 0.4, name: "Market Street" }, originalCode: "FF7F00" },
+            { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), location: { x: 0.4, y: 0.5, name: "Sunny Hills" }, originalCode: "FFFF00" },
+            { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), location: { x: 0.5, y: 0.6, name: "Park District" }, originalCode: "00FF00" },
+            { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" }, originalCode: "0000FF" },
+            { hex: "#4B0082", name: "Indigo", dateAdded: new Date(2025, 0, 11), location: { x: 0.7, y: 0.3, name: "Arts District" }, originalCode: "4B0082" },
+            { hex: "#9400D3", name: "Violet", dateAdded: new Date(2025, 0, 13), location: { x: 0.8, y: 0.2, name: "Historic Quarter" }, originalCode: "9400D3" },
+            { hex: "#FF1493", name: "Deep Pink", dateAdded: new Date(2025, 0, 15), location: { x: 0.6, y: 0.1, name: "Fashion District" }, originalCode: "FF1493" },
+            { hex: "#00FFFF", name: "Cyan", dateAdded: new Date(2025, 0, 17), location: { x: 0.5, y: 0.2, name: "Tech Hub" }, originalCode: "00FFFF" },
+            { hex: "#FFD700", name: "Gold", dateAdded: new Date(2025, 0, 19), location: { x: 0.4, y: 0.3, name: "Financial District" }, originalCode: "FFD700" }
         ];
+        
+        // Color code conversion database
+        // Each format has its own mapping to hex codes
+        const colorCodeMappings = {
+            // Valspar paint color codes
+            valspar: {
+                "8002-45C": "#92B2D1", // Moonglow - Light Blue
+                "8002-30B": "#AEDE9E", // Cool Peridot - Light Green
+                "8002-45G": "#7B9ECF", // Encore - Medium Blue
+                "8002-20A": "#FFD493", // Example Orange
+                "8002-10B": "#FFAFAF",  // Example Pink
+                "7006-12": "#6B8E8E",   // Sharkfin - Gray Blue
+                "8003-38D": "#D8AC67"   // Golden Straw - Warm Gold
+            },
+            // Nissan paint color codes
+            nissan: {
+                "K23": "#C0C0C0",     // Brilliant Silver Metallic
+                "QAB": "#FFFFFF",     // Pearl White
+                "NAH": "#B22222",     // Cayenne Red Pearl
+                "NV245C": "#2B4B65",  // Dark Blue Metallic (example)
+                "RAY": "#000000",     // Super Black
+                "KAD": "#808080",     // Gun Metallic
+                "EBL": "#003399"      // Coulis Blue
+            }
+        };
         
         // DOM elements
         const preview = document.getElementById('preview');
         const colorInput = document.getElementById('color-code');
+        const formatSelect = document.getElementById('format-select');
         const addBtn = document.getElementById('add-btn');
         const viewContainer = document.getElementById('view-container');
         const countElement = document.getElementById('count');
         const viewButtons = document.querySelectorAll('.view-btn');
+        const notification = document.getElementById('notification');
         
         // Current view
         let currentView = 'grid';
@@ -309,12 +510,12 @@
             
             // Color input preview
             colorInput.addEventListener('input', function() {
-                const color = this.value;
-                if (/^[0-9A-Fa-f]{6}$/i.test(color)) {
-                    preview.style.backgroundColor = '#' + color;
-                } else {
-                    preview.style.backgroundColor = '';
-                }
+                updatePreview();
+            });
+            
+            // Format change
+            formatSelect.addEventListener('change', function() {
+                updatePreview();
             });
             
             // Add color button
@@ -330,36 +531,279 @@
             });
             
             // View buttons
-            viewButtons.forEach(btn => {
+            viewButtons.forEach((btn, index) => {
                 btn.addEventListener('click', function() {
                     viewButtons.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     currentView = this.getAttribute('data-view');
-                    renderView();
+                    
+                    // Add animation to container
+                    viewContainer.style.opacity = 0;
+                    setTimeout(() => {
+                        renderView();
+                        viewContainer.style.opacity = 1;
+                    }, 300);
                 });
+                
+                // Add staggered animation to buttons
+                btn.style.animationDelay = `${index * 0.1}s`;
             });
         };
         
+        // Detect color code format automatically
+        function detectColorFormat(code) {
+            // Check for standard hex format (6 hex digits)
+            if (/^[0-9A-Fa-f]{6}$/i.test(code)) {
+                return 'hex';
+            }
+            
+            // Check for Valspar format (XXXX-XXX where X is alphanumeric)
+            if (/^\d{4}-\d{2}[A-Z]$/i.test(code)) {
+                return 'valspar';
+            }
+            
+            // Check for Nissan format (2-5 alphanumeric characters)
+            if (/^[A-Z0-9]{2,5}$/i.test(code) && code !== code.toLowerCase()) {
+                return 'nissan';
+            }
+            
+            // Default to hex if no format is detected
+            return 'hex';
+        }
+        
+        // Convert color code to hex based on format
+        function convertToHex(code, format) {
+            if (format === 'auto') {
+                format = detectColorFormat(code);
+            }
+            
+            switch (format) {
+                case 'hex':
+                    // Validate and return hex
+                    if (/^[0-9A-Fa-f]{6}$/i.test(code)) {
+                        return '#' + code.toUpperCase();
+                    } else {
+                        return null; // Invalid hex format
+                    }
+                    
+                case 'valspar':
+                    // Check if the Valspar code exists in our mapping
+                    if (colorCodeMappings.valspar[code]) {
+                        return colorCodeMappings.valspar[code];
+                    } else {
+                        // Approximate the color if not in database
+                        return approximateValsparColor(code);
+                    }
+                    
+                case 'nissan':
+                    // Check if the Nissan code exists in our mapping
+                    if (colorCodeMappings.nissan[code]) {
+                        return colorCodeMappings.nissan[code];
+                    } else {
+                        // Approximate the color if not in database
+                        return approximateNissanColor(code);
+                    }
+                    
+                default:
+                    return null; // Unknown format
+            }
+        }
+        
+        // Approximate Valspar color when not in database
+        function approximateValsparColor(code) {
+            // Example format: 8002-45C
+            const parts = code.split('-');
+            if (parts.length !== 2) return '#CCCCCC';
+            
+            const baseCode = parts[0]; // e.g., "8002"
+            const colorCode = parts[1]; // e.g., "45C"
+            
+            // Extract number and letter
+            const number = parseInt(colorCode.slice(0, -1)) || 50;
+            const letter = colorCode.slice(-1).toUpperCase();
+            
+            // Basic color approximation based on the letter
+            let r = 128, g = 128, b = 128;
+            
+            // Letter indicates color family
+            switch (letter) {
+                case 'A': // Reds
+                    r = 200; g = 100; b = 100;
+                    break;
+                case 'B': // Greens
+                    r = 100; g = 200; b = 100;
+                    break;
+                case 'C': // Blues
+                    r = 100; g = 100; b = 200;
+                    break;
+                case 'D': // Yellows
+                    r = 200; g = 200; b = 100;
+                    break;
+                case 'E': // Purples
+                    r = 150; g = 100; b = 200;
+                    break;
+                case 'F': // Oranges
+                    r = 200; g = 150; b = 100;
+                    break;
+                case 'G': // Light Blues
+                    r = 100; g = 150; b = 200;
+                    break;
+                default:
+                    // Neutral color
+                    r = g = b = 150;
+            }
+            
+            // Use the number to adjust intensity
+            const intensity = Math.min(100, number) / 100;
+            r = Math.floor(r * intensity + (255 - r * intensity) * (1 - intensity));
+            g = Math.floor(g * intensity + (255 - g * intensity) * (1 - intensity));
+            b = Math.floor(b * intensity + (255 - b * intensity) * (1 - intensity));
+            
+            // Convert to hex
+            return rgbToHex(r, g, b);
+        }
+        
+        // Approximate Nissan color when not in database
+        function approximateNissanColor(code) {
+            // For Nissan codes, use a hash-based approach
+            let hash = 0;
+            for (let i = 0; i < code.length; i++) {
+                hash = code.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            // Generate RGB components from hash
+            let r = (hash & 0xFF0000) >> 16;
+            let g = (hash & 0x00FF00) >> 8;
+            let b = hash & 0x0000FF;
+            
+            // Convert to hex
+            return rgbToHex(r, g, b);
+        }
+        
+        // Convert RGB to hex
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+        
+        // Update color preview based on input
+        function updatePreview() {
+            const code = colorInput.value;
+            const format = formatSelect.value;
+            
+            // Convert to hex for preview
+            const hexColor = convertToHex(code, format);
+            
+            if (hexColor) {
+                preview.style.backgroundColor = hexColor;
+                preview.classList.add('color-preview-active');
+            } else {
+                preview.style.backgroundColor = '';
+                preview.classList.remove('color-preview-active');
+            }
+        }
+        
         // Add a new color
         function addNewColor() {
-            const color = colorInput.value;
-            if (/^[0-9A-Fa-f]{6}$/i.test(color)) {
+            const code = colorInput.value;
+            const format = formatSelect.value;
+            
+            // Convert to hex for internal storage
+            const hexColor = convertToHex(code, format);
+            
+            if (hexColor) {
                 // Create a new color object with metadata
                 const newColor = {
-                    hex: '#' + color.toUpperCase(),
-                    name: getColorName('#' + color.toUpperCase()),
+                    hex: hexColor,
+                    originalCode: code,
+                    name: getColorName(hexColor, code, format),
                     dateAdded: new Date(),
                     location: getRandomLocation()
                 };
                 
+                // Add to collection
                 colors.push(newColor);
+                
+                // Clear input and preview
                 colorInput.value = '';
                 preview.style.backgroundColor = '';
+                
+                // Update view and count
                 renderView();
                 updateCount();
+                
+                // Show notification
+                showNotification();
+                
+                // Add color to mapping if not exists
+                if (format !== 'hex' && format !== 'auto') {
+                    const formatKey = format === 'auto' ? detectColorFormat(code) : format;
+                    if (formatKey !== 'hex' && !colorCodeMappings[formatKey][code]) {
+                        colorCodeMappings[formatKey][code] = hexColor;
+                    }
+                }
             } else {
-                alert('Please enter a valid hex code');
+                alert('Please enter a valid color code for the selected format');
             }
+        }
+        
+        // Show notification
+        function showNotification() {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+        
+        // Get a descriptive name for a color
+        function getColorName(hex, originalCode, format) {
+            if (format !== 'hex' && format !== 'auto') {
+                return originalCode + ' - ' + getBasicColorName(hex);
+            }
+            
+            return getBasicColorName(hex);
+        }
+        
+        // Get a basic color name based on HSL
+        function getBasicColorName(hex) {
+            const hue = getHue(hex);
+            const sat = getSaturation(hex);
+            const light = getLightness(hex);
+            
+            // Create a descriptive name based on HSL values
+            let prefix = '';
+            let name = '';
+            
+            // Brightness prefix
+            if (light < 20) {
+                prefix = 'Dark';
+            } else if (light > 80) {
+                prefix = 'Light';
+            } else if (sat < 20) {
+                prefix = 'Grayish';
+            } else if (sat > 80) {
+                prefix = 'Vivid';
+            }
+            
+            // Hue name
+            if (hue >= 0 && hue < 30) {
+                name = 'Red';
+            } else if (hue >= 30 && hue < 60) {
+                name = 'Orange';
+            } else if (hue >= 60 && hue < 90) {
+                name = 'Yellow';
+            } else if (hue >= 90 && hue < 150) {
+                name = 'Green';
+            } else if (hue >= 150 && hue < 210) {
+                name = 'Cyan';
+            } else if (hue >= 210 && hue < 270) {
+                name = 'Blue';
+            } else if (hue >= 270 && hue < 330) {
+                name = 'Purple';
+            } else {
+                name = 'Pink';
+            }
+            
+            return prefix ? `${prefix} ${name}` : name;
         }
         
         // Render the current view
@@ -390,8 +834,8 @@
             const grid = document.createElement('div');
             grid.className = 'color-grid';
             
-            colors.forEach(color => {
-                const square = createColorSquare(color);
+            colors.forEach((color, index) => {
+                const square = createColorSquare(color, index);
                 grid.appendChild(square);
             });
             
@@ -408,8 +852,9 @@
                 return getHue(a.hex) - getHue(b.hex);
             });
             
-            sortedColors.forEach(color => {
-                const square = createColorSquare(color);
+            sortedColors.forEach((color, index) => {
+                const square = createColorSquare(color, index);
+                square.style.animationDelay = `${index * 0.05}s`;
                 grid.appendChild(square);
             });
             
@@ -433,7 +878,7 @@
             const endDate = sortedColors[sortedColors.length - 1].dateAdded;
             const dateRange = endDate - startDate;
             
-            sortedColors.forEach(color => {
+            sortedColors.forEach((color, index) => {
                 const position = (color.dateAdded - startDate) / dateRange;
                 
                 // Create marker
@@ -441,15 +886,23 @@
                 marker.className = 'timeline-marker';
                 marker.style.backgroundColor = color.hex;
                 marker.style.left = `${position * 100}%`;
-                marker.title = color.hex;
+                marker.style.animationDelay = `${index * 0.05}s`;
+                
+                // Set title based on original code if available
+                marker.title = color.originalCode || color.hex;
                 
                 // Add click handler
                 marker.addEventListener('click', function() {
-                    navigator.clipboard.writeText(color.hex.substring(1));
+                    // Copy original code
+                    const copyText = color.originalCode || color.hex.substring(1);
+                    navigator.clipboard.writeText(copyText);
                     this.style.boxShadow = '0 0 15px white';
                     setTimeout(() => {
                         this.style.boxShadow = '0 0 5px white';
                     }, 500);
+                    
+                    // Show feedback
+                    showCopyNotification(copyText);
                 });
                 
                 // Add date label
@@ -505,18 +958,26 @@
                         region.appendChild(nameLabel);
                         
                         // Add colors to region
-                        regions[regionKey].colors.forEach(color => {
+                        regions[regionKey].colors.forEach((color, index) => {
                             const colorSquare = document.createElement('div');
                             colorSquare.className = 'map-color';
                             colorSquare.style.backgroundColor = color.hex;
-                            colorSquare.title = `${color.hex} - ${color.name}`;
+                            colorSquare.style.animationDelay = `${index * 0.05}s`;
+                            
+                            // Set title based on original code if available
+                            colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
                             
                             colorSquare.addEventListener('click', function() {
-                                navigator.clipboard.writeText(color.hex.substring(1));
+                                // Copy original code
+                                const copyText = color.originalCode || color.hex.substring(1);
+                                navigator.clipboard.writeText(copyText);
                                 this.style.boxShadow = '0 0 15px white';
                                 setTimeout(() => {
                                     this.style.boxShadow = '';
                                 }, 500);
+                                
+                                // Show feedback
+                                showCopyNotification(copyText);
                             });
                             
                             region.appendChild(colorSquare);
@@ -572,11 +1033,12 @@
             });
             
             // Create groups
-            Object.entries(groups).forEach(([groupName, groupColors]) => {
+            Object.entries(groups).forEach(([groupName, groupColors], groupIndex) => {
                 if (groupColors.length === 0) return;
                 
                 const group = document.createElement('div');
                 group.className = 'color-group';
+                group.style.animationDelay = `${groupIndex * 0.1}s`;
                 
                 const title = document.createElement('div');
                 title.className = 'color-group-title';
@@ -586,18 +1048,26 @@
                 const colorsContainer = document.createElement('div');
                 colorsContainer.className = 'group-colors';
                 
-                groupColors.forEach(color => {
+                groupColors.forEach((color, colorIndex) => {
                     const colorSquare = document.createElement('div');
                     colorSquare.className = 'group-color';
                     colorSquare.style.backgroundColor = color.hex;
-                    colorSquare.title = `${color.hex} - ${color.name}`;
+                    colorSquare.style.setProperty('--index', colorIndex);
+                    
+                    // Set title based on original code if available
+                    colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
                     
                     colorSquare.addEventListener('click', function() {
-                        navigator.clipboard.writeText(color.hex.substring(1));
+                        // Copy original code
+                        const copyText = color.originalCode || color.hex.substring(1);
+                        navigator.clipboard.writeText(copyText);
                         this.style.boxShadow = '0 0 15px white';
                         setTimeout(() => {
                             this.style.boxShadow = '';
                         }, 500);
+                        
+                        // Show feedback
+                        showCopyNotification(copyText);
                     });
                     
                     colorsContainer.appendChild(colorSquare);
@@ -610,34 +1080,69 @@
             viewContainer.appendChild(relationshipView);
         }
         
-        // Create a color square with info overlay
-        function createColorSquare(color) {
+        // Create a color square with animation and info overlay
+        function createColorSquare(color, index) {
             const square = document.createElement('div');
             square.className = 'color-square';
             square.style.backgroundColor = color.hex;
-            square.title = color.hex;
+            square.style.animationDelay = `${index * 0.05}s`;
+            
+            // Set title based on original code
+            square.title = color.originalCode || color.hex;
             
             // Add info overlay
             const info = document.createElement('div');
             info.className = 'color-info';
-            info.textContent = color.hex;
+            info.textContent = color.originalCode || color.hex;
             square.appendChild(info);
             
             // Add click handler (copy color code)
             square.addEventListener('click', function() {
-                navigator.clipboard.writeText(color.hex.substring(1));
-                this.style.boxShadow = '0 0 15px white';
+                const copyText = color.originalCode || color.hex.substring(1);
+                navigator.clipboard.writeText(copyText);
+                this.classList.add('color-added');
                 setTimeout(() => {
-                    this.style.boxShadow = '';
-                }, 500);
+                    this.classList.remove('color-added');
+                }, 1000);
+                
+                // Show feedback
+                showCopyNotification(copyText);
             });
             
             return square;
         }
         
-        // Update count
+        // Show copy notification
+        function showCopyNotification(code) {
+            notification.textContent = `Copied ${code} to clipboard!`;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+        
+        // Update count with animation
         function updateCount() {
-            countElement.textContent = colors.length;
+            const oldCount = parseInt(countElement.textContent);
+            const newCount = colors.length;
+            
+            // Animate count changing
+            if (oldCount !== newCount) {
+                countElement.textContent = oldCount;
+                
+                let current = oldCount;
+                const step = newCount > oldCount ? 1 : -1;
+                const interval = setInterval(() => {
+                    current += step;
+                    countElement.textContent = current;
+                    
+                    if (current === newCount) {
+                        clearInterval(interval);
+                    }
+                }, 50);
+            } else {
+                countElement.textContent = newCount;
+            }
         }
         
         // Format date (e.g., "Jan 1")
@@ -662,49 +1167,6 @@
             ];
             
             return locations[Math.floor(Math.random() * locations.length)];
-        }
-        
-        // Get a simple name for a color
-        function getColorName(hex) {
-            const hue = getHue(hex);
-            const sat = getSaturation(hex);
-            const light = getLightness(hex);
-            
-            // Create a descriptive name based on HSL values
-            let prefix = '';
-            let name = '';
-            
-            // Brightness prefix
-            if (light < 20) {
-                prefix = 'Dark';
-            } else if (light > 80) {
-                prefix = 'Light';
-            } else if (sat < 20) {
-                prefix = 'Grayish';
-            } else if (sat > 80) {
-                prefix = 'Vivid';
-            }
-            
-            // Hue name
-            if (hue >= 0 && hue < 30) {
-                name = 'Red';
-            } else if (hue >= 30 && hue < 60) {
-                name = 'Orange';
-            } else if (hue >= 60 && hue < 90) {
-                name = 'Yellow';
-            } else if (hue >= 90 && hue < 150) {
-                name = 'Green';
-            } else if (hue >= 150 && hue < 210) {
-                name = 'Cyan';
-            } else if (hue >= 210 && hue < 270) {
-                name = 'Blue';
-            } else if (hue >= 270 && hue < 330) {
-                name = 'Purple';
-            } else {
-                name = 'Pink';
-            }
-            
-            return prefix ? `${prefix} ${name}` : name;
         }
         
         // Get hue value (0-360) from hex color
@@ -793,6 +1255,3 @@
             
             return { r, g, b };
         }
-    </script>
-</body>
-</html>

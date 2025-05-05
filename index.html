@@ -45,6 +45,13 @@
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
         
+        .detected-format {
+            font-size: 12px;
+            color: rgba(0, 255, 255, 0.7);
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
         input {
             background: black;
             color: cyan;
@@ -54,6 +61,7 @@
             font-family: monospace;
             border-radius: 3px;
             transition: all 0.3s ease;
+            width: 150px;
         }
         
         input:focus {
@@ -359,35 +367,7 @@
             animation: glow 1.5s infinite alternate;
         }
         
-        /* Format toggle */
-        .format-toggle {
-            display: flex;
-            align-items: center;
-            margin-left: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .format-toggle label {
-            margin-right: 5px;
-            font-size: 12px;
-        }
-        
-        select {
-            background: black;
-            color: cyan;
-            border: 1px solid cyan;
-            padding: 5px;
-            font-family: monospace;
-            border-radius: 3px;
-            transition: all 0.3s ease;
-        }
-        
-        select:focus {
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-            outline: none;
-        }
-        
-        /* Success notification */
+        /* Notification */
         .notification {
             position: fixed;
             bottom: 20px;
@@ -422,15 +402,7 @@
     <div class="input-area">
         <div id="preview" class="color-preview"></div>
         <input type="text" id="color-code" placeholder="ENTER COLOR CODE">
-        <div class="format-toggle">
-            <label for="format-select">Format:</label>
-            <select id="format-select">
-                <option value="hex">HEX</option>
-                <option value="valspar">VALSPAR</option>
-                <option value="nissan">NISSAN</option>
-                <option value="auto">AUTO-DETECT</option>
-            </select>
-        </div>
+        <div id="format-display" class="detected-format"></div>
         <button id="add-btn">ADD COLOR</button>
     </div>
     
@@ -457,43 +429,44 @@
             { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), location: { x: 0.3, y: 0.4, name: "Market Street" }, originalCode: "FF7F00" },
             { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), location: { x: 0.4, y: 0.5, name: "Sunny Hills" }, originalCode: "FFFF00" },
             { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), location: { x: 0.5, y: 0.6, name: "Park District" }, originalCode: "00FF00" },
-            { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" }, originalCode: "0000FF" },
-            { hex: "#4B0082", name: "Indigo", dateAdded: new Date(2025, 0, 11), location: { x: 0.7, y: 0.3, name: "Arts District" }, originalCode: "4B0082" },
-            { hex: "#9400D3", name: "Violet", dateAdded: new Date(2025, 0, 13), location: { x: 0.8, y: 0.2, name: "Historic Quarter" }, originalCode: "9400D3" },
-            { hex: "#FF1493", name: "Deep Pink", dateAdded: new Date(2025, 0, 15), location: { x: 0.6, y: 0.1, name: "Fashion District" }, originalCode: "FF1493" },
-            { hex: "#00FFFF", name: "Cyan", dateAdded: new Date(2025, 0, 17), location: { x: 0.5, y: 0.2, name: "Tech Hub" }, originalCode: "00FFFF" },
-            { hex: "#FFD700", name: "Gold", dateAdded: new Date(2025, 0, 19), location: { x: 0.4, y: 0.3, name: "Financial District" }, originalCode: "FFD700" }
+            { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" }, originalCode: "0000FF" }
         ];
         
         // Color code conversion database
-        // Each format has its own mapping to hex codes
         const colorCodeMappings = {
-            // Valspar paint color codes
-            valspar: {
-                "8002-45C": "#92B2D1", // Moonglow - Light Blue
-                "8002-30B": "#AEDE9E", // Cool Peridot - Light Green
-                "8002-45G": "#7B9ECF", // Encore - Medium Blue
-                "8002-20A": "#FFD493", // Example Orange
-                "8002-10B": "#FFAFAF",  // Example Pink
-                "7006-12": "#6B8E8E",   // Sharkfin - Gray Blue
-                "8003-38D": "#D8AC67"   // Golden Straw - Warm Gold
-            },
+            // Valspar paint color codes (format: XXXX-XXX)
+            "8002-45C": "#92B2D1", // Moonglow - Light Blue
+            "8002-30B": "#AEDE9E", // Cool Peridot - Light Green
+            "8002-45G": "#7B9ECF", // Encore - Medium Blue
+            "8002-20A": "#FFD493", // Example Orange
+            "8002-10B": "#FFAFAF", // Example Pink
+            "7006-12": "#6B8E8E",  // Sharkfin - Gray Blue
+            "8003-38D": "#D8AC67", // Golden Straw - Warm Gold
+            
             // Nissan paint color codes
-            nissan: {
-                "K23": "#C0C0C0",     // Brilliant Silver Metallic
-                "QAB": "#FFFFFF",     // Pearl White
-                "NAH": "#B22222",     // Cayenne Red Pearl
-                "NV245C": "#2B4B65",  // Dark Blue Metallic (example)
-                "RAY": "#000000",     // Super Black
-                "KAD": "#808080",     // Gun Metallic
-                "EBL": "#003399"      // Coulis Blue
-            }
+            "K23": "#C0C0C0",     // Brilliant Silver Metallic
+            "QAB": "#FFFFFF",     // Pearl White
+            "NAH": "#B22222",     // Cayenne Red Pearl
+            "NV245C": "#2B4B65",  // Dark Blue Metallic
+            "RAY": "#000000",     // Super Black
+            "KAD": "#808080",     // Gun Metallic
+            "EBL": "#003399",     // Coulis Blue
+            
+            // Add other brand formats here
         };
+        
+        // Format detection patterns
+        const formatPatterns = [
+            { name: "HEX", pattern: /^[0-9A-Fa-f]{6}$/i, prefix: "#" },
+            { name: "VALSPAR", pattern: /^\d{4}-\d{2}[A-Z]$/i, prefix: "" },
+            { name: "NISSAN", pattern: /^(NV)?\d{3}[A-Z]$|^[A-Z]{2,3}$/i, prefix: "" }
+            // Add more format patterns as needed
+        ];
         
         // DOM elements
         const preview = document.getElementById('preview');
         const colorInput = document.getElementById('color-code');
-        const formatSelect = document.getElementById('format-select');
+        const formatDisplay = document.getElementById('format-display');
         const addBtn = document.getElementById('add-btn');
         const viewContainer = document.getElementById('view-container');
         const countElement = document.getElementById('count');
@@ -508,14 +481,9 @@
             renderView();
             updateCount();
             
-            // Color input preview
+            // Color input preview and format detection
             colorInput.addEventListener('input', function() {
-                updatePreview();
-            });
-            
-            // Format change
-            formatSelect.addEventListener('change', function() {
-                updatePreview();
+                updatePreviewAndFormat();
             });
             
             // Add color button
@@ -545,73 +513,70 @@
                     }, 300);
                 });
                 
-                // Add staggered animation to buttons
+                // Staggered animation
                 btn.style.animationDelay = `${index * 0.1}s`;
             });
         };
         
-        // Detect color code format automatically
-        function detectColorFormat(code) {
-            // Check for standard hex format (6 hex digits)
-            if (/^[0-9A-Fa-f]{6}$/i.test(code)) {
-                return 'hex';
-            }
+        // Update color preview and detect format
+        function updatePreviewAndFormat() {
+            const code = colorInput.value.trim();
             
-            // Check for Valspar format (XXXX-XXX where X is alphanumeric)
-            if (/^\d{4}-\d{2}[A-Z]$/i.test(code)) {
-                return 'valspar';
-            }
+            // Reset
+            preview.style.backgroundColor = '';
+            formatDisplay.textContent = '';
             
-            // Check for Nissan format (2-5 alphanumeric characters)
-            if (/^[A-Z0-9]{2,5}$/i.test(code) && code !== code.toLowerCase()) {
-                return 'nissan';
-            }
+            if (!code) return;
             
-            // Default to hex if no format is detected
-            return 'hex';
+            // Detect format
+            const format = detectFormat(code);
+            if (format) {
+                formatDisplay.textContent = format.name + " FORMAT";
+                
+                // Convert to hex for preview
+                const hexColor = convertToHex(code, format);
+                if (hexColor) {
+                    preview.style.backgroundColor = hexColor;
+                }
+            }
+        }
+        
+        // Detect color code format
+        function detectFormat(code) {
+            for (const format of formatPatterns) {
+                if (format.pattern.test(code)) {
+                    return format;
+                }
+            }
+            return null;
         }
         
         // Convert color code to hex based on format
         function convertToHex(code, format) {
-            if (format === 'auto') {
-                format = detectColorFormat(code);
+            // If it's already a hex code
+            if (format.name === "HEX") {
+                return format.prefix + code.toUpperCase();
             }
             
-            switch (format) {
-                case 'hex':
-                    // Validate and return hex
-                    if (/^[0-9A-Fa-f]{6}$/i.test(code)) {
-                        return '#' + code.toUpperCase();
-                    } else {
-                        return null; // Invalid hex format
-                    }
-                    
-                case 'valspar':
-                    // Check if the Valspar code exists in our mapping
-                    if (colorCodeMappings.valspar[code]) {
-                        return colorCodeMappings.valspar[code];
-                    } else {
-                        // Approximate the color if not in database
-                        return approximateValsparColor(code);
-                    }
-                    
-                case 'nissan':
-                    // Check if the Nissan code exists in our mapping
-                    if (colorCodeMappings.nissan[code]) {
-                        return colorCodeMappings.nissan[code];
-                    } else {
-                        // Approximate the color if not in database
-                        return approximateNissanColor(code);
-                    }
-                    
+            // Check if it exists in our mapping
+            if (colorCodeMappings[code]) {
+                return colorCodeMappings[code];
+            }
+            
+            // If not found in mapping, try to approximate based on the format
+            switch (format.name) {
+                case "VALSPAR":
+                    return approximateValsparColor(code);
+                case "NISSAN":
+                    return approximateNissanColor(code);
                 default:
-                    return null; // Unknown format
+                    return null;
             }
         }
         
-        // Approximate Valspar color when not in database
+        // Approximate Valspar color when not in mapping
         function approximateValsparColor(code) {
-            // Example format: 8002-45C
+            // Format: XXXX-XXX (e.g., 8002-45C)
             const parts = code.split('-');
             if (parts.length !== 2) return '#CCCCCC';
             
@@ -653,7 +618,7 @@
                     r = g = b = 150;
             }
             
-            // Use the number to adjust intensity
+            // Use the number to adjust intensity/lightness
             const intensity = Math.min(100, number) / 100;
             r = Math.floor(r * intensity + (255 - r * intensity) * (1 - intensity));
             g = Math.floor(g * intensity + (255 - g * intensity) * (1 - intensity));
@@ -663,9 +628,9 @@
             return rgbToHex(r, g, b);
         }
         
-        // Approximate Nissan color when not in database
+        // Approximate Nissan color when not in mapping
         function approximateNissanColor(code) {
-            // For Nissan codes, use a hash-based approach
+            // For Nissan codes, use a hash-based approach for more consistent results
             let hash = 0;
             for (let i = 0; i < code.length; i++) {
                 hash = code.charCodeAt(i) + ((hash << 5) - hash);
@@ -676,6 +641,11 @@
             let g = (hash & 0x00FF00) >> 8;
             let b = hash & 0x0000FF;
             
+            // Make sure they're in range 0-255
+            r = Math.abs(r % 256);
+            g = Math.abs(g % 256);
+            b = Math.abs(b % 256);
+            
             // Convert to hex
             return rgbToHex(r, g, b);
         }
@@ -685,69 +655,61 @@
             return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
         }
         
-        // Update color preview based on input
-        function updatePreview() {
-            const code = colorInput.value;
-            const format = formatSelect.value;
-            
-            // Convert to hex for preview
-            const hexColor = convertToHex(code, format);
-            
-            if (hexColor) {
-                preview.style.backgroundColor = hexColor;
-                preview.classList.add('color-preview-active');
-            } else {
-                preview.style.backgroundColor = '';
-                preview.classList.remove('color-preview-active');
-            }
-        }
-        
         // Add a new color
         function addNewColor() {
-            const code = colorInput.value;
-            const format = formatSelect.value;
+            const code = colorInput.value.trim();
+            if (!code) return;
             
-            // Convert to hex for internal storage
+            // Detect format
+            const format = detectFormat(code);
+            if (!format) {
+                alert('Unknown color code format. Please try again.');
+                return;
+            }
+            
+            // Convert to hex
             const hexColor = convertToHex(code, format);
+            if (!hexColor) {
+                alert('Could not convert color code to hex.');
+                return;
+            }
             
-            if (hexColor) {
-                // Create a new color object with metadata
-                const newColor = {
-                    hex: hexColor,
-                    originalCode: code,
-                    name: getColorName(hexColor, code, format),
-                    dateAdded: new Date(),
-                    location: getRandomLocation()
-                };
-                
-                // Add to collection
-                colors.push(newColor);
-                
-                // Clear input and preview
-                colorInput.value = '';
-                preview.style.backgroundColor = '';
-                
-                // Update view and count
-                renderView();
-                updateCount();
-                
-                // Show notification
-                showNotification();
-                
-                // Add color to mapping if not exists
-                if (format !== 'hex' && format !== 'auto') {
-                    const formatKey = format === 'auto' ? detectColorFormat(code) : format;
-                    if (formatKey !== 'hex' && !colorCodeMappings[formatKey][code]) {
-                        colorCodeMappings[formatKey][code] = hexColor;
-                    }
-                }
-            } else {
-                alert('Please enter a valid color code for the selected format');
+            // Get color name
+            let colorName = getColorName(hexColor, code, format.name);
+            
+            // Create a new color object with metadata
+            const newColor = {
+                hex: hexColor,
+                originalCode: code,
+                name: colorName,
+                dateAdded: new Date(),
+                location: getRandomLocation()
+            };
+            
+            // Add to collection
+            colors.push(newColor);
+            
+            // Clear input and preview
+            colorInput.value = '';
+            preview.style.backgroundColor = '';
+            formatDisplay.textContent = '';
+            
+            // Update view and count
+            renderView();
+            updateCount();
+            
+            // Show notification
+            showNotification('Color added: ' + code);
+            
+            // Add color to our mapping if not exists
+            if (format.name !== "HEX" && !colorCodeMappings[code]) {
+                colorCodeMappings[code] = hexColor;
             }
         }
         
         // Show notification
-        function showNotification() {
+        function showNotification(message) {
+            notification.textContent = message;
             notification.classList.add('show');
             setTimeout(() => {
                 notification.classList.remove('show');
@@ -755,15 +717,15 @@
         }
         
         // Get a descriptive name for a color
-        function getColorName(hex, originalCode, format) {
-            if (format !== 'hex' && format !== 'auto') {
+        function getColorName(hex, originalCode, formatName) {
+            if (formatName !== "HEX") {
                 return originalCode + ' - ' + getBasicColorName(hex);
             }
             
             return getBasicColorName(hex);
         }
         
-        // Get a basic color name based on HSL
+        // Get a basic color name based on HSL values
         function getBasicColorName(hex) {
             const hue = getHue(hex);
             const sat = getSaturation(hex);
@@ -888,7 +850,7 @@
                 marker.style.left = `${position * 100}%`;
                 marker.style.animationDelay = `${index * 0.05}s`;
                 
-                // Set title based on original code if available
+                // Set title based on original code
                 marker.title = color.originalCode || color.hex;
                 
                 // Add click handler
@@ -902,7 +864,7 @@
                     }, 500);
                     
                     // Show feedback
-                    showCopyNotification(copyText);
+                    showNotification('Copied: ' + copyText);
                 });
                 
                 // Add date label
@@ -964,7 +926,7 @@
                             colorSquare.style.backgroundColor = color.hex;
                             colorSquare.style.animationDelay = `${index * 0.05}s`;
                             
-                            // Set title based on original code if available
+                            // Set title based on original code
                             colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
                             
                             colorSquare.addEventListener('click', function() {
@@ -977,7 +939,7 @@
                                 }, 500);
                                 
                                 // Show feedback
-                                showCopyNotification(copyText);
+                                showNotification('Copied: ' + copyText);
                             });
                             
                             region.appendChild(colorSquare);
@@ -1054,7 +1016,7 @@
                     colorSquare.style.backgroundColor = color.hex;
                     colorSquare.style.setProperty('--index', colorIndex);
                     
-                    // Set title based on original code if available
+                    // Set title based on original code
                     colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
                     
                     colorSquare.addEventListener('click', function() {
@@ -1067,7 +1029,7 @@
                         }, 500);
                         
                         // Show feedback
-                        showCopyNotification(copyText);
+                        showNotification('Copied: ' + copyText);
                     });
                     
                     colorsContainer.appendChild(colorSquare);
@@ -1106,19 +1068,10 @@
                 }, 1000);
                 
                 // Show feedback
-                showCopyNotification(copyText);
+                showNotification('Copied: ' + copyText);
             });
             
             return square;
-        }
-        
-        // Show copy notification
-        function showCopyNotification(code) {
-            notification.textContent = `Copied ${code} to clipboard!`;
-            notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 2000);
         }
         
         // Update count with animation
@@ -1255,3 +1208,6 @@
             
             return { r, g, b };
         }
+    </script>
+</body>
+</html>

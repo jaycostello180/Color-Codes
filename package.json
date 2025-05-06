@@ -1,0 +1,12 @@
+{
+  "name": "swatch-party",
+  "version": "1.0.0",
+  "description": "A collaborative color swatch collector",
+  "main": "index.html",
+  "dependencies": {
+    "faunadb": "^4.7.0"
+  },
+  "scripts": {
+    "build": "echo \"No build step required\""
+  }
+}

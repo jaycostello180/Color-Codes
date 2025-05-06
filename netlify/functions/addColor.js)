@@ -1,15 +1,15 @@
-// netlify/functions/addColor.js
+// This function adds a new color to the database
 const faunadb = require('faunadb');
 const q = faunadb.query;
 
-// Initialize FaunaDB client with your secret
+// Initialize the FaunaDB client with your secret key
 const client = new faunadb.Client({
   secret: process.env.FAUNA_SECRET_KEY
 });
 
 exports.handler = async (event) => {
   try {
-    // Parse the incoming request body
+    // Parse the color data from the request
     const data = JSON.parse(event.body);
     const { hex, originalCode, name, proximity } = data;
     
@@ -30,11 +30,15 @@ exports.handler = async (event) => {
       )
     );
     
+    // Return the new color data
     return {
       statusCode: 200,
       body: JSON.stringify(result.data)
     };
   } catch (error) {
+    // Handle any errors
+    console.error("Database error:", error);
+    
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message })
@@ -42,7 +46,7 @@ exports.handler = async (event) => {
   }
 };
 
-// Helper function to generate a random location
+// Helper function to generate a random location (same as in your original code)
 function getRandomLocation() {
   const locations = [
     { name: "Downtown", x: 0.2, y: 0.3 },

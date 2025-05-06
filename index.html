@@ -1,10 +1,10 @@
 // Enhanced color collection with metadata
 let colors = [
-    { hex: "#FF0000", name: "Red", dateAdded: new Date(2025, 0, 1), location: { x: 0.2, y: 0.3, name: "Downtown" }, originalCode: "FF0000", proximity: "neutral" },
-    { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), location: { x: 0.3, y: 0.4, name: "Market Street" }, originalCode: "FF7F00", proximity: "neutral" },
-    { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), location: { x: 0.4, y: 0.5, name: "Sunny Hills" }, originalCode: "FFFF00", proximity: "neutral" },
-    { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), location: { x: 0.5, y: 0.6, name: "Park District" }, originalCode: "00FF00", proximity: "neutral" },
-    { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" }, originalCode: "0000FF", proximity: "neutral" }
+    { hex: "#FF0000", name: "Red", dateAdded: new Date(2025, 0, 1), proximity: "somewhat-close", originalCode: "FF0000" },
+    { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), proximity: "neutral", originalCode: "FF7F00" },
+    { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), proximity: "very-close", originalCode: "FFFF00" },
+    { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), proximity: "somewhat-distant", originalCode: "00FF00" },
+    { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), proximity: "very-distant", originalCode: "0000FF" }
 ];
 
 // Color code conversion database
@@ -25,9 +25,7 @@ const colorCodeMappings = {
     "NV245C": "#2B4B65",  // Dark Blue Metallic
     "RAY": "#000000",     // Super Black
     "KAD": "#808080",     // Gun Metallic
-    "EBL": "#003399",     // Coulis Blue
-    
-    // Add other brand formats here
+    "EBL": "#003399"      // Coulis Blue
 };
 
 // Format detection patterns
@@ -35,8 +33,16 @@ const formatPatterns = [
     { name: "HEX", pattern: /^[0-9A-Fa-f]{6}$/i, prefix: "#" },
     { name: "VALSPAR", pattern: /^\d{4}-\d{2}[A-Z]$/i, prefix: "" },
     { name: "NISSAN", pattern: /^(NV)?\d{3}[A-Z]$|^[A-Z]{2,3}$/i, prefix: "" }
-    // Add more format patterns as needed
 ];
+
+// Proximity values for color galaxy
+const proximityValues = {
+    "very-close": 0.2,
+    "somewhat-close": 0.4,
+    "neutral": 0.6,
+    "somewhat-distant": 0.8,
+    "very-distant": 1.0
+};
 
 // DOM elements
 const preview = document.getElementById('preview');
@@ -86,8 +92,7 @@ async function addNewColorWithProximity(colorData, proximity) {
         const newColor = {
             ...colorData,
             proximity,
-            dateAdded: new Date(),
-            location: getRandomLocation()
+            dateAdded: new Date()
         };
         colors.push(newColor);
         
@@ -97,19 +102,19 @@ async function addNewColorWithProximity(colorData, proximity) {
 
 // Initialize
 window.onload = async function() {
+    // Add CSS for color spotlight to head
+    addSpotlightStyles();
+    
     // Try to fetch colors from the server
     const serverColors = await fetchColors();
     
-    // If we got colors from the server, use them instead of the default ones
+    // If we got colors from the server, use them
     if (serverColors && serverColors.length > 0) {
         colors = serverColors;
     }
     
     renderView();
     updateCount();
-    
-    // Add CSS for color spotlight if it doesn't exist
-    addSpotlightStyles();
     
     // Color input preview and format detection
     colorInput.addEventListener('input', function() {
@@ -129,7 +134,7 @@ window.onload = async function() {
     });
     
     // View buttons
-    viewButtons.forEach((btn, index) => {
+    viewButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             viewButtons.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
@@ -142,81 +147,8 @@ window.onload = async function() {
                 viewContainer.style.opacity = 1;
             }, 300);
         });
-        
-        // Staggered animation
-        btn.style.animationDelay = `${index * 0.1}s`;
     });
 };
-
-// Add CSS for spotlight
-function addSpotlightStyles() {
-    // Check if styles already exist
-    if (document.getElementById('spotlight-styles')) return;
-    
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'spotlight-styles';
-    styleSheet.textContent = `
-        /* Color spotlight styles */
-        .color-spotlight {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            animation: fadeIn 0.3s ease-out;
-        }
-        
-        .proximity-question {
-            background: rgba(0, 0, 0, 0.7);
-            color: cyan;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            max-width: 500px;
-            font-family: monospace;
-        }
-        
-        .proximity-options {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .proximity-options button {
-            background: rgba(0, 255, 255, 0.1);
-            color: cyan;
-            border: 1px solid cyan;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: monospace;
-        }
-        
-        .proximity-options button:hover {
-            background: rgba(0, 255, 255, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-        }
-        
-        .animated-square {
-            position: fixed;
-            width: 200px;
-            height: 200px;
-            z-index: 999;
-            transition: all 0.5s ease;
-            border-radius: 5px;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-        }
-    `;
-    document.head.appendChild(styleSheet);
-}
 
 // Update color preview and detect format
 function updatePreviewAndFormat() {
@@ -393,6 +325,200 @@ function addNewColor() {
     formatDisplay.textContent = '';
 }
 
+// Add CSS for spotlight
+function addSpotlightStyles() {
+    // Check if styles already exist
+    if (document.getElementById('spotlight-styles')) return;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'spotlight-styles';
+    styleSheet.textContent = `
+        /* Color spotlight styles */
+        .color-spotlight {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .proximity-question {
+            background: rgba(0, 0, 0, 0.7);
+            color: cyan;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+            font-family: monospace;
+        }
+        
+        .proximity-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .proximity-options button {
+            background: rgba(0, 255, 255, 0.1);
+            color: cyan;
+            border: 1px solid cyan;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: monospace;
+        }
+        
+        .proximity-options button:hover {
+            background: rgba(0, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .animated-square {
+            position: fixed;
+            width: 200px;
+            height: 200px;
+            z-index: 999;
+            transition: all 0.5s ease;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Galaxy view styles */
+        .galaxy-view {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        
+        .galaxy-star {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            margin: -20px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            animation: twinkle 4s infinite alternate;
+        }
+        
+        .galaxy-star:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.8);
+        }
+        
+        .galaxy-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 80px;
+            margin: -40px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.7);
+            animation: pulse 3s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { box-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
+            to { box-shadow: 0 0 50px rgba(0, 255, 255, 0.8); }
+        }
+        
+        @keyframes twinkle {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        /* Color theory view styles */
+        .color-theory-view {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .color-theory-section {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        .color-theory-title {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: cyan;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .color-theory-description {
+            font-size: 12px;
+            margin-bottom: 15px;
+            color: rgba(0, 255, 255, 0.8);
+        }
+        
+        .color-theory-combinations {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .color-theory-combination {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            width: 150px;
+        }
+        
+        .color-theory-swatches {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .color-theory-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .color-theory-swatch:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .color-theory-info {
+            font-size: 10px;
+            color: rgba(0, 255, 255, 0.7);
+            text-align: center;
+        }
+    `;
+    
+    document.head.appendChild(styleSheet);
+}
+
 // Color spotlight animation and proximity question
 function showColorSpotlight(color) {
     // Create spotlight container
@@ -545,11 +671,11 @@ function renderView() {
         case 'timeline':
             renderTimelineView();
             break;
-        case 'map':
-            renderMapView();
+        case 'map': // Replace map with galaxy view
+            renderGalaxyView(); 
             break;
-        case 'relationship':
-            renderRelationshipView();
+        case 'relationship': // Enhanced with color theory
+            renderColorTheoryView();
             break;
     }
 }
@@ -642,167 +768,246 @@ function renderTimelineView() {
     viewContainer.appendChild(timeline);
 }
 
-// Render Map View
-function renderMapView() {
-    const map = document.createElement('div');
-    map.className = 'map-view';
+// NEW: Render Galaxy View (replaces Map View)
+function renderGalaxyView() {
+    const galaxyView = document.createElement('div');
+    galaxyView.className = 'galaxy-view';
     
-    // Create regions (10x10 grid)
-    const regions = {};
+    // Add galaxy center
+    const center = document.createElement('div');
+    center.className = 'galaxy-center';
+    galaxyView.appendChild(center);
     
-    // Group colors by region
-    colors.forEach(color => {
-        const x = Math.floor(color.location.x * 10);
-        const y = Math.floor(color.location.y * 10);
-        const regionKey = `${x}-${y}`;
+    // Calculate coordinates for each color based on proximity
+    colors.forEach((color, index) => {
+        // Get proximity value (defaults to neutral if not set)
+        const proximityValue = proximityValues[color.proximity || 'neutral'];
         
-        if (!regions[regionKey]) {
-            regions[regionKey] = {
-                colors: [],
-                name: color.location.name
-            };
-        }
+        // Calculate angle (distribute colors evenly around the center)
+        const angle = (index / colors.length) * Math.PI * 2;
         
-        regions[regionKey].colors.push(color);
+        // Calculate distance from center based on proximity
+        // Very close = near center, very distant = far from center
+        const distance = proximityValue * 45; // % of available space
+        
+        // Calculate x and y coordinates (center of galaxy is at 50%)
+        const x = 50 + Math.cos(angle) * distance;
+        const y = 50 + Math.sin(angle) * distance;
+        
+        // Create star for this color
+        const star = document.createElement('div');
+        star.className = 'galaxy-star';
+        star.style.backgroundColor = color.hex;
+        star.style.left = `${x}%`;
+        star.style.top = `${y}%`;
+        
+        // Size based on inverse of proximity (closer feels bigger)
+        const size = 40 + ((1 - proximityValue) * 20);
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.margin = `-${size/2}px`;
+        
+        // Set animation delay for twinkling effect
+        star.style.animationDelay = `${index * 0.5}s`;
+        
+        // Add tooltip
+        star.title = `${color.name} - ${color.proximity.replace('-', ' ')}`;
+        
+        // Add click handler
+        star.addEventListener('click', function() {
+            // Copy original code
+            const copyText = color.originalCode || color.hex.substring(1);
+            navigator.clipboard.writeText(copyText);
+            
+            // Visual feedback
+            this.style.boxShadow = '0 0 25px white';
+            setTimeout(() => {
+                this.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.5)';
+            }, 500);
+            
+            // Show notification
+            showNotification('Copied: ' + copyText);
+        });
+        
+        galaxyView.appendChild(star);
     });
     
-    // Create map regions
-    for (let y = 0; y < 10; y++) {
-        for (let x = 0; x < 10; x++) {
-            const regionKey = `${x}-${y}`;
-            const region = document.createElement('div');
-            region.className = 'map-region';
-            region.style.gridColumn = x + 1;
-            region.style.gridRow = y + 1;
-            
-            // Add region name if it exists
-            if (regions[regionKey]) {
-                const nameLabel = document.createElement('div');
-                nameLabel.className = 'map-region-name';
-                nameLabel.textContent = regions[regionKey].name;
-                region.appendChild(nameLabel);
-                
-                // Add colors to region
-                regions[regionKey].colors.forEach((color, index) => {
-                    const colorSquare = document.createElement('div');
-                    colorSquare.className = 'map-color';
-                    colorSquare.style.backgroundColor = color.hex;
-                    colorSquare.style.animationDelay = `${index * 0.05}s`;
-                    
-                    // Set title based on original code
-                    colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
-                    
-                    colorSquare.addEventListener('click', function() {
-                        // Copy original code
-                        const copyText = color.originalCode || color.hex.substring(1);
-                        navigator.clipboard.writeText(copyText);
-                        this.style.boxShadow = '0 0 15px white';
-                        setTimeout(() => {
-                            this.style.boxShadow = '';
-                        }, 500);
-                        
-                        // Show feedback
-                        showNotification('Copied: ' + copyText);
-                    });
-                    
-                    region.appendChild(colorSquare);
-                });
-            }
-            
-            map.appendChild(region);
-        }
-    }
-    
-    viewContainer.appendChild(map);
+    viewContainer.appendChild(galaxyView);
 }
 
-// Render Relationship View
-function renderRelationshipView() {
-    const relationshipView = document.createElement('div');
-    relationshipView.className = 'relationship-view';
+// NEW: Render Color Theory View (enhanced Relationship View)
+function renderColorTheoryView() {
+    const theoryView = document.createElement('div');
+    theoryView.className = 'color-theory-view';
     
-    // Group colors by hue categories
-    const groups = {
-        'Reds': [],
-        'Oranges': [],
-        'Yellows': [],
-        'Greens': [],
-        'Blues': [],
-        'Purples': [],
-        'Pinks': [],
-        'Neutrals': []
-    };
+    // Get all unique base colors
+    const baseColors = colors.slice(0, Math.min(colors.length, 5));
     
-    colors.forEach(color => {
-        const hue = getHue(color.hex);
-        const sat = getSaturation(color.hex);
-        const light = getLightness(color.hex);
-        
-        if (sat < 10 || light > 90 || light < 10) {
-            groups['Neutrals'].push(color);
-        } else if (hue >= 0 && hue < 30) {
-            groups['Reds'].push(color);
-        } else if (hue >= 30 && hue < 60) {
-            groups['Oranges'].push(color);
-        } else if (hue >= 60 && hue < 90) {
-            groups['Yellows'].push(color);
-        } else if (hue >= 90 && hue < 150) {
-            groups['Greens'].push(color);
-        } else if (hue >= 150 && hue < 240) {
-            groups['Blues'].push(color);
-        } else if (hue >= 240 && hue < 300) {
-            groups['Purples'].push(color);
-        } else {
-            groups['Pinks'].push(color);
-        }
-    });
+    // 1. Complementary colors section
+    renderColorTheorySection(theoryView, baseColors, 'complementary', 'Complementary Colors', 'Colors directly opposite each other on the color wheel. High contrast and vibrant combinations.', getComplementaryColors);
     
-    // Create groups
-    Object.entries(groups).forEach(([groupName, groupColors], groupIndex) => {
-        if (groupColors.length === 0) return;
+    // 2. Analogous colors section
+    renderColorTheorySection(theoryView, baseColors, 'analogous', 'Analogous Colors', 'Colors that are adjacent to each other on the color wheel. Harmonious and natural combinations.', getAnalogousColors);
+    
+    // 3. Triadic colors section
+    renderColorTheorySection(theoryView, baseColors, 'triadic', 'Triadic Colors', 'Three colors equally spaced around the color wheel. Balanced and vibrant combinations.', getTriadicColors);
+    
+    // 4. Split complementary colors section
+    renderColorTheorySection(theoryView, baseColors, 'split', 'Split Complementary', 'A base color plus two colors adjacent to its complement. High contrast with less tension.', getSplitComplementaryColors);
+    
+    // 5. Monochromatic colors section
+    renderColorTheorySection(theoryView, baseColors, 'monochromatic', 'Monochromatic', 'Different shades, tints, and tones of a single color. Elegant and cohesive combinations.', getMonochromaticColors);
+    
+    viewContainer.appendChild(theoryView);
+}
+
+// Helper function to render a color theory section
+function renderColorTheorySection(container, baseColors, type, title, description, getColorsFn) {
+    const section = document.createElement('div');
+    section.className = 'color-theory-section';
+    
+    // Add title
+    const titleElem = document.createElement('div');
+    titleElem.className = 'color-theory-title';
+    titleElem.textContent = title;
+    section.appendChild(titleElem);
+    
+    // Add description
+    const descElem = document.createElement('div');
+    descElem.className = 'color-theory-description';
+    descElem.textContent = description;
+    section.appendChild(descElem);
+    
+    // Container for color combinations
+    const combosContainer = document.createElement('div');
+    combosContainer.className = 'color-theory-combinations';
+    
+    // Generate combinations for each base color
+    baseColors.forEach(baseColor => {
+        // Get related colors based on the color theory type
+        const relatedColors = getColorsFn(baseColor.hex);
         
-        const group = document.createElement('div');
-        group.className = 'color-group';
-        group.style.animationDelay = `${groupIndex * 0.1}s`;
+        // Create combination element
+        const combo = document.createElement('div');
+        combo.className = 'color-theory-combination';
         
-        const title = document.createElement('div');
-        title.className = 'color-group-title';
-        title.textContent = groupName;
-        group.appendChild(title);
+        // Create swatches container
+        const swatches = document.createElement('div');
+        swatches.className = 'color-theory-swatches';
         
-        const colorsContainer = document.createElement('div');
-        colorsContainer.className = 'group-colors';
+        // Add base color swatch
+        const baseSwatch = document.createElement('div');
+        baseSwatch.className = 'color-theory-swatch';
+        baseSwatch.style.backgroundColor = baseColor.hex;
+        baseSwatch.title = baseColor.name;
+        swatches.appendChild(baseSwatch);
         
-        groupColors.forEach((color, colorIndex) => {
-            const colorSquare = document.createElement('div');
-            colorSquare.className = 'group-color';
-            colorSquare.style.backgroundColor = color.hex;
-            colorSquare.style.setProperty('--index', colorIndex);
+        // Add related color swatches
+        relatedColors.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-theory-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.title = color;
             
-            // Set title based on original code
-            colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
-            
-            colorSquare.addEventListener('click', function() {
-                // Copy original code
-                const copyText = color.originalCode || color.hex.substring(1);
+            // Add click handler to copy color code
+            swatch.addEventListener('click', function() {
+                const copyText = color.substring(1); // Remove # from hex
                 navigator.clipboard.writeText(copyText);
+                
+                // Visual feedback
                 this.style.boxShadow = '0 0 15px white';
                 setTimeout(() => {
                     this.style.boxShadow = '';
                 }, 500);
                 
-                // Show feedback
+                // Show notification
                 showNotification('Copied: ' + copyText);
             });
             
-            colorsContainer.appendChild(colorSquare);
+            swatches.appendChild(swatch);
         });
         
-        group.appendChild(colorsContainer);
-        relationshipView.appendChild(group);
+        // Add swatches to combo
+        combo.appendChild(swatches);
+        
+        // Add info text
+        const info = document.createElement('div');
+        info.className = 'color-theory-info';
+        info.textContent = `${baseColor.name} ${type}`;
+        combo.appendChild(info);
+        
+        // Add combo to container
+        combosContainer.appendChild(combo);
     });
     
-    viewContainer.appendChild(relationshipView);
+    section.appendChild(combosContainer);
+    container.appendChild(section);
+}
+
+// Get complementary color
+function getComplementaryColors(baseHex) {
+    const hue = getHue(baseHex);
+    const complementaryHue = (hue + 180) % 360;
+    
+    return [getColorFromHue(complementaryHue)];
+}
+
+// Get analogous colors
+function getAnalogousColors(baseHex) {
+    const hue = getHue(baseHex);
+    const hue1 = (hue + 30) % 360;
+    const hue2 = (hue + 330) % 360;
+    
+    return [getColorFromHue(hue1), getColorFromHue(hue2)];
+}
+
+// Get triadic colors
+function getTriadicColors(baseHex) {
+    const hue = getHue(baseHex);
+    const hue1 = (hue + 120) % 360;
+    const hue2 = (hue + 240) % 360;
+    
+    return [getColorFromHue(hue1), getColorFromHue(hue2)];
+}
+
+// Get split complementary colors
+function getSplitComplementaryColors(baseHex) {
+    const hue = getHue(baseHex);
+    const complementaryHue = (hue + 180) % 360;
+    const hue1 = (complementaryHue + 30) % 360;
+    const hue2 = (complementaryHue + 330) % 360;
+    
+    return [getColorFromHue(hue1), getColorFromHue(hue2)];
+}
+
+// Get monochromatic colors
+function getMonochromaticColors(baseHex) {
+    const hue = getHue(baseHex);
+    const sat = getSaturation(baseHex);
+    const light = getLightness(baseHex);
+    
+    // Create lighter and darker versions
+    const lighter = hslToHex(hue, Math.min(sat, 100), Math.min(light + 30, 100));
+    const darker = hslToHex(hue, Math.min(sat, 100), Math.max(light - 30, 0));
+    
+    return [lighter, darker];
+}
+
+// Create a color from a hue value
+function getColorFromHue(hue) {
+    return hslToHex(hue, 70, 50);
+}
+
+// Convert HSL to hex
+function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
 }
 
 // Create a color square with animation and info overlay
@@ -865,25 +1070,6 @@ function updateCount() {
 function formatDate(date) {
     const options = { month: 'short', day: 'numeric' };
     return date.toLocaleDateString(undefined, options);
-}
-
-// Get random location
-// Get random location
-function getRandomLocation() {
-    const locations = [
-        { name: "Downtown", x: 0.2, y: 0.3 },
-        { name: "Market Street", x: 0.3, y: 0.4 },
-        { name: "Sunny Hills", x: 0.4, y: 0.5 },
-        { name: "Park District", x: 0.5, y: 0.6 },
-        { name: "Ocean View", x: 0.6, y: 0.4 },
-        { name: "Arts District", x: 0.7, y: 0.3 },
-        { name: "Historic Quarter", x: 0.8, y: 0.2 },
-        { name: "Fashion District", x: 0.6, y: 0.1 },
-        { name: "Tech Hub", x: 0.5, y: 0.2 },
-        { name: "Financial District", x: 0.4, y: 0.3 }
-    ];
-    
-    return locations[Math.floor(Math.random() * locations.length)];
 }
 
 // Get hue value (0-360) from hex color

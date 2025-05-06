@@ -1,1020 +1,693 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swatch Party</title>
-    <style>
-        body {
-            background-color: black;
-            color: cyan;
-            font-family: monospace;
-            margin: 0;
-            padding: 20px;
-        }
+// Enhanced color collection with metadata
+let colors = [
+    { hex: "#FF0000", name: "Red", dateAdded: new Date(2025, 0, 1), location: { x: 0.2, y: 0.3, name: "Downtown" }, originalCode: "FF0000", proximity: "neutral" },
+    { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), location: { x: 0.3, y: 0.4, name: "Market Street" }, originalCode: "FF7F00", proximity: "neutral" },
+    { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), location: { x: 0.4, y: 0.5, name: "Sunny Hills" }, originalCode: "FFFF00", proximity: "neutral" },
+    { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), location: { x: 0.5, y: 0.6, name: "Park District" }, originalCode: "00FF00", proximity: "neutral" },
+    { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" }, originalCode: "0000FF", proximity: "neutral" }
+];
+
+// Color code conversion database
+const colorCodeMappings = {
+    // Valspar paint color codes (format: XXXX-XXX)
+    "8002-45C": "#92B2D1", // Moonglow - Light Blue
+    "8002-30B": "#AEDE9E", // Cool Peridot - Light Green
+    "8002-45G": "#7B9ECF", // Encore - Medium Blue
+    "8002-20A": "#FFD493", // Example Orange
+    "8002-10B": "#FFAFAF", // Example Pink
+    "7006-12": "#6B8E8E",  // Sharkfin - Gray Blue
+    "8003-38D": "#D8AC67", // Golden Straw - Warm Gold
+    
+    // Nissan paint color codes
+    "K23": "#C0C0C0",     // Brilliant Silver Metallic
+    "QAB": "#FFFFFF",     // Pearl White
+    "NAH": "#B22222",     // Cayenne Red Pearl
+    "NV245C": "#2B4B65",  // Dark Blue Metallic
+    "RAY": "#000000",     // Super Black
+    "KAD": "#808080",     // Gun Metallic
+    "EBL": "#003399",     // Coulis Blue
+    
+    // Add other brand formats here
+};
+
+// Format detection patterns
+const formatPatterns = [
+    { name: "HEX", pattern: /^[0-9A-Fa-f]{6}$/i, prefix: "#" },
+    { name: "VALSPAR", pattern: /^\d{4}-\d{2}[A-Z]$/i, prefix: "" },
+    { name: "NISSAN", pattern: /^(NV)?\d{3}[A-Z]$|^[A-Z]{2,3}$/i, prefix: "" }
+    // Add more format patterns as needed
+];
+
+// DOM elements
+const preview = document.getElementById('preview');
+const colorInput = document.getElementById('color-code');
+const formatDisplay = document.getElementById('format-display');
+const addBtn = document.getElementById('add-btn');
+const viewContainer = document.getElementById('view-container');
+const countElement = document.getElementById('count');
+const viewButtons = document.querySelectorAll('.view-btn');
+const notification = document.getElementById('notification');
+
+// Current view
+let currentView = 'grid';
+
+// Function to fetch colors from the serverless function
+async function fetchColors() {
+    try {
+        const response = await fetch('/.netlify/functions/getColors');
+        if (!response.ok) throw new Error('Network response was not ok');
         
-        .input-area {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            background: rgba(0, 255, 255, 0.1);
-            padding: 15px;
-            border: 1px solid cyan;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
+        const colors = await response.json();
+        return colors;
+    } catch (error) {
+        console.error('Error fetching colors:', error);
+        return [];
+    }
+}
+
+// Function to add a new color with proximity data
+async function addNewColorWithProximity(colorData, proximity) {
+    try {
+        const response = await fetch('/.netlify/functions/addColor', {
+            method: 'POST',
+            body: JSON.stringify({
+                ...colorData,
+                proximity
+            })
+        });
         
-        .input-area:hover {
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-            transform: translateY(-2px);
-        }
+        if (!response.ok) throw new Error('Network response was not ok');
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error('Error adding color:', error);
         
-        .color-preview {
-            width: 50px;
-            height: 50px;
-            border: 1px solid cyan;
-            margin-right: 10px;
-            border-radius: 5px;
-            transition: all 0.5s ease;
-            box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
-        }
+        // Fallback: Add to local array if server fails
+        const newColor = {
+            ...colorData,
+            proximity,
+            dateAdded: new Date(),
+            location: getRandomLocation()
+        };
+        colors.push(newColor);
         
-        .color-preview:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        return newColor;
+    }
+}
+
+// Initialize
+window.onload = async function() {
+    // Try to fetch colors from the server
+    const serverColors = await fetchColors();
+    
+    // If we got colors from the server, use them instead of the default ones
+    if (serverColors && serverColors.length > 0) {
+        colors = serverColors;
+    }
+    
+    renderView();
+    updateCount();
+    
+    // Add CSS for color spotlight if it doesn't exist
+    addSpotlightStyles();
+    
+    // Color input preview and format detection
+    colorInput.addEventListener('input', function() {
+        updatePreviewAndFormat();
+    });
+    
+    // Add color button
+    addBtn.addEventListener('click', function() {
+        addNewColor();
+    });
+    
+    // Add color on Enter key
+    colorInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            addNewColor();
         }
+    });
+    
+    // View buttons
+    viewButtons.forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+            viewButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentView = this.getAttribute('data-view');
+            
+            // Add animation to container
+            viewContainer.style.opacity = 0;
+            setTimeout(() => {
+                renderView();
+                viewContainer.style.opacity = 1;
+            }, 300);
+        });
         
-        .detected-format {
-            font-size: 12px;
-            color: rgba(0, 255, 255, 0.7);
-            margin-left: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        input {
-            background: black;
-            color: cyan;
-            border: 1px solid cyan;
-            padding: 10px;
-            margin-right: 10px;
-            font-family: monospace;
-            border-radius: 3px;
-            transition: all 0.3s ease;
-            width: 150px;
-        }
-        
-        input:focus {
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-            outline: none;
-        }
-        
-        button {
-            background: cyan;
-            color: black;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-family: monospace;
-            text-transform: uppercase;
-            border-radius: 3px;
-            transition: all 0.3s ease;
-        }
-        
-        button:hover {
-            background: #00ffff;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
-            transform: translateY(-2px);
-        }
-        
-        button:active {
-            transform: translateY(1px);
-        }
-        
-        .view-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .view-btn {
-            background: black;
-            color: cyan;
-            border: 1px solid cyan;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-family: monospace;
-            border-radius: 3px;
-            transition: all 0.3s ease;
-        }
-        
-        .view-btn:hover {
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        .view-btn.active {
-            background: cyan;
-            color: black;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
-        }
-        
-        /* Color grid view styles */
-        .color-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            transition: all 0.5s ease;
-        }
-        
-        .color-square {
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
-            position: relative;
-            margin: 0;
-            overflow: hidden; /* For info overlay */
-            border-radius: 3px;
-            transition: all 0.3s ease;
-            animation: fadeIn 0.5s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        
-        .color-square:hover {
-            transform: scale(1.2);
-            z-index: 10;
-            box-shadow: 0 0 15px white;
-        }
-        
-        /* Color info overlay */
-        .color-info {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            color: cyan;
-            padding: 5px;
-            font-size: 10px;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-            text-align: center;
-        }
-        
-        .color-square:hover .color-info {
-            transform: translateY(0);
-        }
-        
-        /* Timeline view styles */
-        .timeline-view {
-            position: relative;
-            height: 300px;
-            margin: 80px 0 40px 0;
-            transition: all 0.5s ease;
-        }
-        
-        .timeline-line {
-            position: absolute;
-            top: 50%;
+        // Staggered animation
+        btn.style.animationDelay = `${index * 0.1}s`;
+    });
+};
+
+// Add CSS for spotlight
+function addSpotlightStyles() {
+    // Check if styles already exist
+    if (document.getElementById('spotlight-styles')) return;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'spotlight-styles';
+    styleSheet.textContent = `
+        /* Color spotlight styles */
+        .color-spotlight {
+            position: fixed;
+            top: 0;
             left: 0;
             right: 0;
-            height: 2px;
-            background-color: cyan;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-            animation: glow 2s infinite alternate;
-        }
-        
-        @keyframes glow {
-            from { box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
-            to { box-shadow: 0 0 15px rgba(0, 255, 255, 0.7); }
-        }
-        
-        .timeline-marker {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            cursor: pointer;
-            border: 1px solid white;
-            transition: all 0.3s ease;
-            animation: pulseIn 0.5s ease-out;
-        }
-        
-        @keyframes pulseIn {
-            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-        
-        .timeline-marker:hover {
-            transform: translate(-50%, -50%) scale(1.3);
-            box-shadow: 0 0 15px white;
-        }
-        
-        .timeline-date {
-            position: absolute;
-            top: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
-            white-space: nowrap;
-            color: rgba(0, 255, 255, 0.8);
-        }
-        
-        /* Map view styles */
-        .map-view {
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            grid-template-rows: repeat(10, 1fr);
-            gap: 1px;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            height: 500px;
-            position: relative;
-            border-radius: 5px;
-            overflow: hidden;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-            transition: all 0.5s ease;
-            animation: fadeIn 0.8s ease-out;
-        }
-        
-        .map-region {
-            border: 1px solid rgba(0, 255, 255, 0.2);
+            bottom: 0;
             display: flex;
-            flex-wrap: wrap;
-            align-content: flex-start;
-            padding: 2px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .map-region:hover {
-            background: rgba(0, 255, 255, 0.05);
-            z-index: 5;
-        }
-        
-        .map-region-name {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            font-size: 8px;
-            opacity: 0.7;
-            pointer-events: none;
-            transition: all 0.3s ease;
-        }
-        
-        .map-region:hover .map-region-name {
-            opacity: 1;
-            color: white;
-            text-shadow: 0 0 5px cyan;
-        }
-        
-        .map-color {
-            width: 15px;
-            height: 15px;
-            margin: 2px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            transition: transform 0.2s ease;
-            border-radius: 2px;
-            animation: popIn 0.3s ease-out;
-        }
-        
-        @keyframes popIn {
-            from { transform: scale(0); }
-            70% { transform: scale(1.2); }
-            to { transform: scale(1); }
-        }
-        
-        .map-color:hover {
-            transform: scale(1.5);
-            z-index: 10;
-            box-shadow: 0 0 8px white;
-        }
-        
-        /* Relationship view styles */
-        .relationship-view {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 30px;
+            align-items: center;
             justify-content: center;
-            transition: all 0.5s ease;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
         }
         
-        .color-group {
-            background: rgba(0, 255, 255, 0.05);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            padding: 15px;
-            border-radius: 5px;
-            max-width: 200px;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        
-        .color-group:hover {
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-            transform: translateY(-5px);
-        }
-        
-        .color-group-title {
-            font-size: 14px;
-            margin-bottom: 10px;
-            text-align: center;
+        .proximity-question {
+            background: rgba(0, 0, 0, 0.7);
             color: cyan;
-            text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-        }
-        
-        .group-colors {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            justify-content: center;
-        }
-        
-        .group-color {
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            border-radius: 3px;
-            animation: popIn 0.3s ease-out;
-            animation-delay: calc(var(--index) * 0.05s);
-        }
-        
-        .group-color:hover {
-            transform: scale(1.3);
-            z-index: 10;
-            box-shadow: 0 0 10px white;
-        }
-        
-        /* Stats styles */
-        .stats {
-            margin-top: 20px;
+            padding: 30px;
+            border-radius: 10px;
             text-align: center;
-            font-size: 18px;
-            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
-            animation: glow 1.5s infinite alternate;
+            max-width: 500px;
+            font-family: monospace;
         }
         
-        /* Notification */
-        .notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 255, 255, 0.2);
-            color: white;
-            padding: 15px 20px;
+        .proximity-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .proximity-options button {
+            background: rgba(0, 255, 255, 0.1);
+            color: cyan;
+            border: 1px solid cyan;
+            padding: 10px 15px;
             border-radius: 5px;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-            transform: translateX(200%);
-            transition: transform 0.5s ease;
-            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: monospace;
         }
         
-        .notification.show {
-            transform: translateX(0);
+        .proximity-options button:hover {
+            background: rgba(0, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
+        
+        .animated-square {
+            position: fixed;
+            width: 200px;
+            height: 200px;
+            z-index: 999;
+            transition: all 0.5s ease;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+    `;
+    document.head.appendChild(styleSheet);
+}
 
-        /* Color addition effect */
-        .color-added {
-            animation: colorPulse 1s;
+// Update color preview and detect format
+function updatePreviewAndFormat() {
+    const code = colorInput.value.trim();
+    
+    // Reset
+    preview.style.backgroundColor = '';
+    formatDisplay.textContent = '';
+    
+    if (!code) return;
+    
+    // Detect format
+    const format = detectFormat(code);
+    if (format) {
+        formatDisplay.textContent = format.name + " FORMAT";
+        
+        // Convert to hex for preview
+        const hexColor = convertToHex(code, format);
+        if (hexColor) {
+            preview.style.backgroundColor = hexColor;
         }
-        
-        @keyframes colorPulse {
-            0% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
-            50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.8); }
-            100% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+    }
+}
+
+// Detect color code format
+function detectFormat(code) {
+    for (const format of formatPatterns) {
+        if (format.pattern.test(code)) {
+            return format;
         }
-    </style>
-</head>
-<body>
-    <div class="input-area">
-        <div id="preview" class="color-preview"></div>
-        <input type="text" id="color-code" placeholder="ENTER COLOR CODE">
-        <div id="format-display" class="detected-format"></div>
-        <button id="add-btn">ADD COLOR</button>
-    </div>
+    }
+    return null;
+}
+
+// Convert color code to hex based on format
+function convertToHex(code, format) {
+    // If it's already a hex code
+    if (format.name === "HEX") {
+        return format.prefix + code.toUpperCase();
+    }
     
-    <div class="view-controls">
-        <button class="view-btn active" data-view="grid">GRID</button>
-        <button class="view-btn" data-view="spectrum">SPECTRUM</button>
-        <button class="view-btn" data-view="timeline">TIMELINE</button>
-        <button class="view-btn" data-view="map">MAP</button>
-        <button class="view-btn" data-view="relationship">RELATIONSHIPS</button>
-    </div>
+    // Check if it exists in our mapping
+    if (colorCodeMappings[code]) {
+        return colorCodeMappings[code];
+    }
     
-    <div id="view-container"></div>
-    
-    <div class="stats">
-        <span id="count">0</span> COLORS IN COLLECTIVE
-    </div>
-    
-    <div class="notification" id="notification">Color added to collective!</div>
-    
-    <script>
-        // Enhanced color collection with metadata
-        const colors = [
-            { hex: "#FF0000", name: "Red", dateAdded: new Date(2025, 0, 1), location: { x: 0.2, y: 0.3, name: "Downtown" }, originalCode: "FF0000" },
-            { hex: "#FF7F00", name: "Orange", dateAdded: new Date(2025, 0, 3), location: { x: 0.3, y: 0.4, name: "Market Street" }, originalCode: "FF7F00" },
-            { hex: "#FFFF00", name: "Yellow", dateAdded: new Date(2025, 0, 5), location: { x: 0.4, y: 0.5, name: "Sunny Hills" }, originalCode: "FFFF00" },
-            { hex: "#00FF00", name: "Green", dateAdded: new Date(2025, 0, 7), location: { x: 0.5, y: 0.6, name: "Park District" }, originalCode: "00FF00" },
-            { hex: "#0000FF", name: "Blue", dateAdded: new Date(2025, 0, 9), location: { x: 0.6, y: 0.4, name: "Ocean View" }, originalCode: "0000FF" }
-        ];
-        
-        // Color code conversion database
-        const colorCodeMappings = {
-            // Valspar paint color codes (format: XXXX-XXX)
-            "8002-45C": "#92B2D1", // Moonglow - Light Blue
-            "8002-30B": "#AEDE9E", // Cool Peridot - Light Green
-            "8002-45G": "#7B9ECF", // Encore - Medium Blue
-            "8002-20A": "#FFD493", // Example Orange
-            "8002-10B": "#FFAFAF", // Example Pink
-            "7006-12": "#6B8E8E",  // Sharkfin - Gray Blue
-            "8003-38D": "#D8AC67", // Golden Straw - Warm Gold
-            
-            // Nissan paint color codes
-            "K23": "#C0C0C0",     // Brilliant Silver Metallic
-            "QAB": "#FFFFFF",     // Pearl White
-            "NAH": "#B22222",     // Cayenne Red Pearl
-            "NV245C": "#2B4B65",  // Dark Blue Metallic
-            "RAY": "#000000",     // Super Black
-            "KAD": "#808080",     // Gun Metallic
-            "EBL": "#003399",     // Coulis Blue
-            
-            // Add other brand formats here
-        };
-        
-        // Format detection patterns
-        const formatPatterns = [
-            { name: "HEX", pattern: /^[0-9A-Fa-f]{6}$/i, prefix: "#" },
-            { name: "VALSPAR", pattern: /^\d{4}-\d{2}[A-Z]$/i, prefix: "" },
-            { name: "NISSAN", pattern: /^(NV)?\d{3}[A-Z]$|^[A-Z]{2,3}$/i, prefix: "" }
-            // Add more format patterns as needed
-        ];
-        
-        // DOM elements
-        const preview = document.getElementById('preview');
-        const colorInput = document.getElementById('color-code');
-        const formatDisplay = document.getElementById('format-display');
-        const addBtn = document.getElementById('add-btn');
-        const viewContainer = document.getElementById('view-container');
-        const countElement = document.getElementById('count');
-        const viewButtons = document.querySelectorAll('.view-btn');
-        const notification = document.getElementById('notification');
-        
-        // Current view
-        let currentView = 'grid';
-        
-        // Initialize
-        window.onload = function() {
-            renderView();
-            updateCount();
-            
-            // Color input preview and format detection
-            colorInput.addEventListener('input', function() {
-                updatePreviewAndFormat();
-            });
-            
-            // Add color button
-            addBtn.addEventListener('click', function() {
-                addNewColor();
-            });
-            
-            // Add color on Enter key
-            colorInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    addNewColor();
-                }
-            });
-            
-            // View buttons
-            viewButtons.forEach((btn, index) => {
-                btn.addEventListener('click', function() {
-                    viewButtons.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    currentView = this.getAttribute('data-view');
-                    
-                    // Add animation to container
-                    viewContainer.style.opacity = 0;
-                    setTimeout(() => {
-                        renderView();
-                        viewContainer.style.opacity = 1;
-                    }, 300);
-                });
-                
-                // Staggered animation
-                btn.style.animationDelay = `${index * 0.1}s`;
-            });
-        };
-        
-        // Update color preview and detect format
-        function updatePreviewAndFormat() {
-            const code = colorInput.value.trim();
-            
-            // Reset
-            preview.style.backgroundColor = '';
-            formatDisplay.textContent = '';
-            
-            if (!code) return;
-            
-            // Detect format
-            const format = detectFormat(code);
-            if (format) {
-                formatDisplay.textContent = format.name + " FORMAT";
-                
-                // Convert to hex for preview
-                const hexColor = convertToHex(code, format);
-                if (hexColor) {
-                    preview.style.backgroundColor = hexColor;
-                }
-            }
-        }
-        
-        // Detect color code format
-        function detectFormat(code) {
-            for (const format of formatPatterns) {
-                if (format.pattern.test(code)) {
-                    return format;
-                }
-            }
+    // If not found in mapping, try to approximate based on the format
+    switch (format.name) {
+        case "VALSPAR":
+            return approximateValsparColor(code);
+        case "NISSAN":
+            return approximateNissanColor(code);
+        default:
             return null;
-        }
+    }
+}
+
+// Approximate Valspar color when not in mapping
+function approximateValsparColor(code) {
+    // Format: XXXX-XXX (e.g., 8002-45C)
+    const parts = code.split('-');
+    if (parts.length !== 2) return '#CCCCCC';
+    
+    const baseCode = parts[0]; // e.g., "8002"
+    const colorCode = parts[1]; // e.g., "45C"
+    
+    // Extract number and letter
+    const number = parseInt(colorCode.slice(0, -1)) || 50;
+    const letter = colorCode.slice(-1).toUpperCase();
+    
+    // Basic color approximation based on the letter
+    let r = 128, g = 128, b = 128;
+    
+    // Letter indicates color family
+    switch (letter) {
+        case 'A': // Reds
+            r = 200; g = 100; b = 100;
+            break;
+        case 'B': // Greens
+            r = 100; g = 200; b = 100;
+            break;
+        case 'C': // Blues
+            r = 100; g = 100; b = 200;
+            break;
+        case 'D': // Yellows
+            r = 200; g = 200; b = 100;
+            break;
+        case 'E': // Purples
+            r = 150; g = 100; b = 200;
+            break;
+        case 'F': // Oranges
+            r = 200; g = 150; b = 100;
+            break;
+        case 'G': // Light Blues
+            r = 100; g = 150; b = 200;
+            break;
+        default:
+            // Neutral color
+            r = g = b = 150;
+    }
+    
+    // Use the number to adjust intensity/lightness
+    const intensity = Math.min(100, number) / 100;
+    r = Math.floor(r * intensity + (255 - r * intensity) * (1 - intensity));
+    g = Math.floor(g * intensity + (255 - g * intensity) * (1 - intensity));
+    b = Math.floor(b * intensity + (255 - b * intensity) * (1 - intensity));
+    
+    // Convert to hex
+    return rgbToHex(r, g, b);
+}
+
+// Approximate Nissan color when not in mapping
+function approximateNissanColor(code) {
+    // For Nissan codes, use a hash-based approach for more consistent results
+    let hash = 0;
+    for (let i = 0; i < code.length; i++) {
+        hash = code.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Generate RGB components from hash
+    let r = (hash & 0xFF0000) >> 16;
+    let g = (hash & 0x00FF00) >> 8;
+    let b = hash & 0x0000FF;
+    
+    // Make sure they're in range 0-255
+    r = Math.abs(r % 256);
+    g = Math.abs(g % 256);
+    b = Math.abs(b % 256);
+    
+    // Convert to hex
+    return rgbToHex(r, g, b);
+}
+
+// Convert RGB to hex
+function rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+}
+
+// Add a new color
+function addNewColor() {
+    const code = colorInput.value.trim();
+    if (!code) return;
+    
+    // Detect format
+    const format = detectFormat(code);
+    if (!format) {
+        alert('Unknown color code format. Please try again.');
+        return;
+    }
+    
+    // Convert to hex
+    const hexColor = convertToHex(code, format);
+    if (!hexColor) {
+        alert('Could not convert color code to hex.');
+        return;
+    }
+    
+    // Get color name
+    let colorName = getColorName(hexColor, code, format.name);
+    
+    // Create a new color object with metadata
+    const newColor = {
+        hex: hexColor,
+        originalCode: code,
+        name: colorName
+    };
+    
+    // Show the color spotlight with proximity question
+    showColorSpotlight(newColor);
+    
+    // Clear input and preview
+    colorInput.value = '';
+    preview.style.backgroundColor = '';
+    formatDisplay.textContent = '';
+}
+
+// Color spotlight animation and proximity question
+function showColorSpotlight(color) {
+    // Create spotlight container
+    const spotlight = document.createElement('div');
+    spotlight.className = 'color-spotlight';
+    spotlight.style.backgroundColor = color.hex;
+    
+    // Create proximity question
+    const question = document.createElement('div');
+    question.className = 'proximity-question';
+    question.innerHTML = `
+        <h3>Does this color feel near or far to you?</h3>
+        <div class="proximity-options">
+            <button data-proximity="very-close">Very Close</button>
+            <button data-proximity="somewhat-close">Somewhat Close</button>
+            <button data-proximity="neutral">Neutral</button>
+            <button data-proximity="somewhat-distant">Somewhat Distant</button>
+            <button data-proximity="very-distant">Very Distant</button>
+        </div>
+    `;
+    
+    spotlight.appendChild(question);
+    document.body.appendChild(spotlight);
+    
+    // Add event listeners to buttons
+    const buttons = spotlight.querySelectorAll('button');
+    buttons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const proximity = button.dataset.proximity;
+            
+            // Save color with proximity
+            await addNewColorWithProximity(color, proximity);
+            
+            // Animate color joining the collection
+            animateColorJoining(spotlight, color);
+        });
+    });
+}
+
+// Animate color joining the collection
+function animateColorJoining(spotlight, color) {
+    // Get position of the color grid
+    const grid = document.querySelector('.color-grid') || viewContainer;
+    const gridRect = grid.getBoundingClientRect();
+    
+    // Create a small square that will animate
+    const animatedSquare = document.createElement('div');
+    animatedSquare.className = 'animated-square';
+    animatedSquare.style.backgroundColor = color.hex;
+    document.body.appendChild(animatedSquare);
+    
+    // Set initial position (center of spotlight)
+    const spotlightRect = spotlight.getBoundingClientRect();
+    animatedSquare.style.top = `${spotlightRect.top + spotlightRect.height/2}px`;
+    animatedSquare.style.left = `${spotlightRect.left + spotlightRect.width/2}px`;
+    
+    // Animate to final position
+    setTimeout(() => {
+        animatedSquare.style.transform = 'scale(0.2)';
+        animatedSquare.style.top = `${gridRect.top + 25}px`;
+        animatedSquare.style.left = `${gridRect.left + 25}px`;
         
-        // Convert color code to hex based on format
-        function convertToHex(code, format) {
-            // If it's already a hex code
-            if (format.name === "HEX") {
-                return format.prefix + code.toUpperCase();
-            }
+        // Remove elements after animation
+        setTimeout(() => {
+            spotlight.remove();
+            animatedSquare.remove();
             
-            // Check if it exists in our mapping
-            if (colorCodeMappings[code]) {
-                return colorCodeMappings[code];
-            }
-            
-            // If not found in mapping, try to approximate based on the format
-            switch (format.name) {
-                case "VALSPAR":
-                    return approximateValsparColor(code);
-                case "NISSAN":
-                    return approximateNissanColor(code);
-                default:
-                    return null;
-            }
-        }
-        
-        // Approximate Valspar color when not in mapping
-        function approximateValsparColor(code) {
-            // Format: XXXX-XXX (e.g., 8002-45C)
-            const parts = code.split('-');
-            if (parts.length !== 2) return '#CCCCCC';
-            
-            const baseCode = parts[0]; // e.g., "8002"
-            const colorCode = parts[1]; // e.g., "45C"
-            
-            // Extract number and letter
-            const number = parseInt(colorCode.slice(0, -1)) || 50;
-            const letter = colorCode.slice(-1).toUpperCase();
-            
-            // Basic color approximation based on the letter
-            let r = 128, g = 128, b = 128;
-            
-            // Letter indicates color family
-            switch (letter) {
-                case 'A': // Reds
-                    r = 200; g = 100; b = 100;
-                    break;
-                case 'B': // Greens
-                    r = 100; g = 200; b = 100;
-                    break;
-                case 'C': // Blues
-                    r = 100; g = 100; b = 200;
-                    break;
-                case 'D': // Yellows
-                    r = 200; g = 200; b = 100;
-                    break;
-                case 'E': // Purples
-                    r = 150; g = 100; b = 200;
-                    break;
-                case 'F': // Oranges
-                    r = 200; g = 150; b = 100;
-                    break;
-                case 'G': // Light Blues
-                    r = 100; g = 150; b = 200;
-                    break;
-                default:
-                    // Neutral color
-                    r = g = b = 150;
-            }
-            
-            // Use the number to adjust intensity/lightness
-            const intensity = Math.min(100, number) / 100;
-            r = Math.floor(r * intensity + (255 - r * intensity) * (1 - intensity));
-            g = Math.floor(g * intensity + (255 - g * intensity) * (1 - intensity));
-            b = Math.floor(b * intensity + (255 - b * intensity) * (1 - intensity));
-            
-            // Convert to hex
-            return rgbToHex(r, g, b);
-        }
-        
-        // Approximate Nissan color when not in mapping
-        function approximateNissanColor(code) {
-            // For Nissan codes, use a hash-based approach for more consistent results
-            let hash = 0;
-            for (let i = 0; i < code.length; i++) {
-                hash = code.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            
-            // Generate RGB components from hash
-            let r = (hash & 0xFF0000) >> 16;
-            let g = (hash & 0x00FF00) >> 8;
-            let b = hash & 0x0000FF;
-            
-            // Make sure they're in range 0-255
-            r = Math.abs(r % 256);
-            g = Math.abs(g % 256);
-            b = Math.abs(b % 256);
-            
-            // Convert to hex
-            return rgbToHex(r, g, b);
-        }
-        
-        // Convert RGB to hex
-        function rgbToHex(r, g, b) {
-            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
-        }
-        
-        // Add a new color
-        function addNewColor() {
-            const code = colorInput.value.trim();
-            if (!code) return;
-            
-            // Detect format
-            const format = detectFormat(code);
-            if (!format) {
-                alert('Unknown color code format. Please try again.');
-                return;
-            }
-            
-            // Convert to hex
-            const hexColor = convertToHex(code, format);
-            if (!hexColor) {
-                alert('Could not convert color code to hex.');
-                return;
-            }
-            
-            // Get color name
-            let colorName = getColorName(hexColor, code, format.name);
-            
-            // Create a new color object with metadata
-            const newColor = {
-                hex: hexColor,
-                originalCode: code,
-                name: colorName,
-                dateAdded: new Date(),
-                location: getRandomLocation()
-            };
-            
-            // Add to collection
-            colors.push(newColor);
-            
-            // Clear input and preview
-            colorInput.value = '';
-            preview.style.backgroundColor = '';
-            formatDisplay.textContent = '';
-            
-            // Update view and count
+            // Refresh the view to show the new color
             renderView();
             updateCount();
             
             // Show notification
-            showNotification('Color added: ' + code);
-            
-            // Add color to our mapping if not exists
-            if (format.name !== "HEX" && !colorCodeMappings[code]) {
-                colorCodeMappings[code] = hexColor;
-            }
-        }
+            showNotification('Color added to collective!');
+        }, 500);
+    }, 100);
+}
+
+// Show notification
+function showNotification(message) {
+    notification.textContent = message;
+    notification.classList.add('show');
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 2000);
+}
+
+// Get a descriptive name for a color
+function getColorName(hex, originalCode, formatName) {
+    if (formatName !== "HEX") {
+        return originalCode + ' - ' + getBasicColorName(hex);
+    }
+    
+    return getBasicColorName(hex);
+}
+
+// Get a basic color name based on HSL values
+function getBasicColorName(hex) {
+    const hue = getHue(hex);
+    const sat = getSaturation(hex);
+    const light = getLightness(hex);
+    
+    // Create a descriptive name based on HSL values
+    let prefix = '';
+    let name = '';
+    
+    // Brightness prefix
+    if (light < 20) {
+        prefix = 'Dark';
+    } else if (light > 80) {
+        prefix = 'Light';
+    } else if (sat < 20) {
+        prefix = 'Grayish';
+    } else if (sat > 80) {
+        prefix = 'Vivid';
+    }
+    
+    // Hue name
+    if (hue >= 0 && hue < 30) {
+        name = 'Red';
+    } else if (hue >= 30 && hue < 60) {
+        name = 'Orange';
+    } else if (hue >= 60 && hue < 90) {
+        name = 'Yellow';
+    } else if (hue >= 90 && hue < 150) {
+        name = 'Green';
+    } else if (hue >= 150 && hue < 210) {
+        name = 'Cyan';
+    } else if (hue >= 210 && hue < 270) {
+        name = 'Blue';
+    } else if (hue >= 270 && hue < 330) {
+        name = 'Purple';
+    } else {
+        name = 'Pink';
+    }
+    
+    return prefix ? `${prefix} ${name}` : name;
+}
+
+// Render the current view
+function renderView() {
+    viewContainer.innerHTML = '';
+    
+    switch(currentView) {
+        case 'grid':
+            renderGridView();
+            break;
+        case 'spectrum':
+            renderSpectrumView();
+            break;
+        case 'timeline':
+            renderTimelineView();
+            break;
+        case 'map':
+            renderMapView();
+            break;
+        case 'relationship':
+            renderRelationshipView();
+            break;
+    }
+}
+
+// Render Grid View
+function renderGridView() {
+    const grid = document.createElement('div');
+    grid.className = 'color-grid';
+    
+    colors.forEach((color, index) => {
+        const square = createColorSquare(color, index);
+        grid.appendChild(square);
+    });
+    
+    viewContainer.appendChild(grid);
+}
+
+// Render Spectrum View
+function renderSpectrumView() {
+    const grid = document.createElement('div');
+    grid.className = 'color-grid';
+    
+    // Sort colors by hue
+    const sortedColors = [...colors].sort((a, b) => {
+        return getHue(a.hex) - getHue(b.hex);
+    });
+    
+    sortedColors.forEach((color, index) => {
+        const square = createColorSquare(color, index);
+        square.style.animationDelay = `${index * 0.05}s`;
+        grid.appendChild(square);
+    });
+    
+    viewContainer.appendChild(grid);
+}
+
+// Render Timeline View
+function renderTimelineView() {
+    const timeline = document.createElement('div');
+    timeline.className = 'timeline-view';
+    
+    const line = document.createElement('div');
+    line.className = 'timeline-line';
+    timeline.appendChild(line);
+    
+    // Sort colors by date
+    const sortedColors = [...colors].sort((a, b) => a.dateAdded - b.dateAdded);
+    
+    // Find date range
+    const startDate = sortedColors[0].dateAdded;
+    const endDate = sortedColors[sortedColors.length - 1].dateAdded;
+    const dateRange = endDate - startDate;
+    
+    sortedColors.forEach((color, index) => {
+        const position = (color.dateAdded - startDate) / dateRange;
         
-        // Show notification
-        function showNotification(message) {
-            notification.textContent = message;
-            notification.classList.add('show');
+        // Create marker
+        const marker = document.createElement('div');
+        marker.className = 'timeline-marker';
+        marker.style.backgroundColor = color.hex;
+        marker.style.left = `${position * 100}%`;
+        marker.style.animationDelay = `${index * 0.05}s`;
+        
+        // Set title based on original code
+        marker.title = color.originalCode || color.hex;
+        
+        // Add click handler
+        marker.addEventListener('click', function() {
+            // Copy original code
+            const copyText = color.originalCode || color.hex.substring(1);
+            navigator.clipboard.writeText(copyText);
+            this.style.boxShadow = '0 0 15px white';
             setTimeout(() => {
-                notification.classList.remove('show');
-            }, 2000);
-        }
+                this.style.boxShadow = '0 0 5px white';
+            }, 500);
+            
+            // Show feedback
+            showNotification('Copied: ' + copyText);
+        });
         
-        // Get a descriptive name for a color
-        function getColorName(hex, originalCode, formatName) {
-            if (formatName !== "HEX") {
-                return originalCode + ' - ' + getBasicColorName(hex);
-            }
-            
-            return getBasicColorName(hex);
-        }
+        // Add date label
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'timeline-date';
+        dateLabel.textContent = formatDate(color.dateAdded);
+        marker.appendChild(dateLabel);
         
-        // Get a basic color name based on HSL values
-        function getBasicColorName(hex) {
-            const hue = getHue(hex);
-            const sat = getSaturation(hex);
-            const light = getLightness(hex);
-            
-            // Create a descriptive name based on HSL values
-            let prefix = '';
-            let name = '';
-            
-            // Brightness prefix
-            if (light < 20) {
-                prefix = 'Dark';
-            } else if (light > 80) {
-                prefix = 'Light';
-            } else if (sat < 20) {
-                prefix = 'Grayish';
-            } else if (sat > 80) {
-                prefix = 'Vivid';
-            }
-            
-            // Hue name
-            if (hue >= 0 && hue < 30) {
-                name = 'Red';
-            } else if (hue >= 30 && hue < 60) {
-                name = 'Orange';
-            } else if (hue >= 60 && hue < 90) {
-                name = 'Yellow';
-            } else if (hue >= 90 && hue < 150) {
-                name = 'Green';
-            } else if (hue >= 150 && hue < 210) {
-                name = 'Cyan';
-            } else if (hue >= 210 && hue < 270) {
-                name = 'Blue';
-            } else if (hue >= 270 && hue < 330) {
-                name = 'Purple';
-            } else {
-                name = 'Pink';
-            }
-            
-            return prefix ? `${prefix} ${name}` : name;
-        }
+        timeline.appendChild(marker);
+    });
+    
+    viewContainer.appendChild(timeline);
+}
+
+// Render Map View
+function renderMapView() {
+    const map = document.createElement('div');
+    map.className = 'map-view';
+    
+    // Create regions (10x10 grid)
+    const regions = {};
+    
+    // Group colors by region
+    colors.forEach(color => {
+        const x = Math.floor(color.location.x * 10);
+        const y = Math.floor(color.location.y * 10);
+        const regionKey = `${x}-${y}`;
         
-        // Render the current view
-        function renderView() {
-            viewContainer.innerHTML = '';
-            
-            switch(currentView) {
-                case 'grid':
-                    renderGridView();
-                    break;
-                case 'spectrum':
-                    renderSpectrumView();
-                    break;
-                case 'timeline':
-                    renderTimelineView();
-                    break;
-                case 'map':
-                    renderMapView();
-                    break;
-                case 'relationship':
-                    renderRelationshipView();
-                    break;
-            }
-        }
-        
-        // Render Grid View
-        function renderGridView() {
-            const grid = document.createElement('div');
-            grid.className = 'color-grid';
-            
-            colors.forEach((color, index) => {
-                const square = createColorSquare(color, index);
-                grid.appendChild(square);
-            });
-            
-            viewContainer.appendChild(grid);
-        }
-        
-        // Render Spectrum View
-        function renderSpectrumView() {
-            const grid = document.createElement('div');
-            grid.className = 'color-grid';
-            
-            // Sort colors by hue
-            const sortedColors = [...colors].sort((a, b) => {
-                return getHue(a.hex) - getHue(b.hex);
-            });
-            
-            sortedColors.forEach((color, index) => {
-                const square = createColorSquare(color, index);
-                square.style.animationDelay = `${index * 0.05}s`;
-                grid.appendChild(square);
-            });
-            
-            viewContainer.appendChild(grid);
-        }
-        
-        // Render Timeline View
-        function renderTimelineView() {
-            const timeline = document.createElement('div');
-            timeline.className = 'timeline-view';
-            
-            const line = document.createElement('div');
-            line.className = 'timeline-line';
-            timeline.appendChild(line);
-            
-            // Sort colors by date
-            const sortedColors = [...colors].sort((a, b) => a.dateAdded - b.dateAdded);
-            
-            // Find date range
-            const startDate = sortedColors[0].dateAdded;
-            const endDate = sortedColors[sortedColors.length - 1].dateAdded;
-            const dateRange = endDate - startDate;
-            
-            sortedColors.forEach((color, index) => {
-                const position = (color.dateAdded - startDate) / dateRange;
-                
-                // Create marker
-                const marker = document.createElement('div');
-                marker.className = 'timeline-marker';
-                marker.style.backgroundColor = color.hex;
-                marker.style.left = `${position * 100}%`;
-                marker.style.animationDelay = `${index * 0.05}s`;
-                
-                // Set title based on original code
-                marker.title = color.originalCode || color.hex;
-                
-                // Add click handler
-                marker.addEventListener('click', function() {
-                    // Copy original code
-                    const copyText = color.originalCode || color.hex.substring(1);
-                    navigator.clipboard.writeText(copyText);
-                    this.style.boxShadow = '0 0 15px white';
-                    setTimeout(() => {
-                        this.style.boxShadow = '0 0 5px white';
-                    }, 500);
-                    
-                    // Show feedback
-                    showNotification('Copied: ' + copyText);
-                });
-                
-                // Add date label
-                const dateLabel = document.createElement('div');
-                dateLabel.className = 'timeline-date';
-                dateLabel.textContent = formatDate(color.dateAdded);
-                marker.appendChild(dateLabel);
-                
-                timeline.appendChild(marker);
-            });
-            
-            viewContainer.appendChild(timeline);
-        }
-        
-        // Render Map View
-        function renderMapView() {
-            const map = document.createElement('div');
-            map.className = 'map-view';
-            
-            // Create regions (10x10 grid)
-            const regions = {};
-            
-            // Group colors by region
-            colors.forEach(color => {
-                const x = Math.floor(color.location.x * 10);
-                const y = Math.floor(color.location.y * 10);
-                const regionKey = `${x}-${y}`;
-                
-                if (!regions[regionKey]) {
-                    regions[regionKey] = {
-                        colors: [],
-                        name: color.location.name
-                    };
-                }
-                
-                regions[regionKey].colors.push(color);
-            });
-            
-            // Create map regions
-            for (let y = 0; y < 10; y++) {
-                for (let x = 0; x < 10; x++) {
-                    const regionKey = `${x}-${y}`;
-                    const region = document.createElement('div');
-                    region.className = 'map-region';
-                    region.style.gridColumn = x + 1;
-                    region.style.gridRow = y + 1;
-                    
-                    // Add region name if it exists
-                    if (regions[regionKey]) {
-                        const nameLabel = document.createElement('div');
-                        nameLabel.className = 'map-region-name';
-                        nameLabel.textContent = regions[regionKey].name;
-                        region.appendChild(nameLabel);
-                        
-                        // Add colors to region
-                        regions[regionKey].colors.forEach((color, index) => {
-                            const colorSquare = document.createElement('div');
-                            colorSquare.className = 'map-color';
-                            colorSquare.style.backgroundColor = color.hex;
-                            colorSquare.style.animationDelay = `${index * 0.05}s`;
-                            
-                            // Set title based on original code
-                            colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
-                            
-                            colorSquare.addEventListener('click', function() {
-                                // Copy original code
-                                const copyText = color.originalCode || color.hex.substring(1);
-                                navigator.clipboard.writeText(copyText);
-                                this.style.boxShadow = '0 0 15px white';
-                                setTimeout(() => {
-                                    this.style.boxShadow = '';
-                                }, 500);
-                                
-                                // Show feedback
-                                showNotification('Copied: ' + copyText);
-                            });
-                            
-                            region.appendChild(colorSquare);
-                        });
-                    }
-                    
-                    map.appendChild(region);
-                }
-            }
-            
-            viewContainer.appendChild(map);
-        }
-        
-        // Render Relationship View
-        function renderRelationshipView() {
-            const relationshipView = document.createElement('div');
-            relationshipView.className = 'relationship-view';
-            
-            // Group colors by hue categories
-            const groups = {
-                'Reds': [],
-                'Oranges': [],
-                'Yellows': [],
-                'Greens': [],
-                'Blues': [],
-                'Purples': [],
-                'Pinks': [],
-                'Neutrals': []
+        if (!regions[regionKey]) {
+            regions[regionKey] = {
+                colors: [],
+                name: color.location.name
             };
+        }
+        
+        regions[regionKey].colors.push(color);
+    });
+    
+    // Create map regions
+    for (let y = 0; y < 10; y++) {
+        for (let x = 0; x < 10; x++) {
+            const regionKey = `${x}-${y}`;
+            const region = document.createElement('div');
+            region.className = 'map-region';
+            region.style.gridColumn = x + 1;
+            region.style.gridRow = y + 1;
             
-            colors.forEach(color => {
-                const hue = getHue(color.hex);
-                const sat = getSaturation(color.hex);
-                const light = getLightness(color.hex);
+            // Add region name if it exists
+            if (regions[regionKey]) {
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'map-region-name';
+                nameLabel.textContent = regions[regionKey].name;
+                region.appendChild(nameLabel);
                 
-                if (sat < 10 || light > 90 || light < 10) {
-                    groups['Neutrals'].push(color);
-                } else if (hue >= 0 && hue < 30) {
-                    groups['Reds'].push(color);
-                } else if (hue >= 30 && hue < 60) {
-                    groups['Oranges'].push(color);
-                } else if (hue >= 60 && hue < 90) {
-                    groups['Yellows'].push(color);
-                } else if (hue >= 90 && hue < 150) {
-                    groups['Greens'].push(color);
-                } else if (hue >= 150 && hue < 240) {
-                    groups['Blues'].push(color);
-                } else if (hue >= 240 && hue < 300) {
-                    groups['Purples'].push(color);
-                } else {
-                    groups['Pinks'].push(color);
-                }
-            });
-            
-            // Create groups
-            Object.entries(groups).forEach(([groupName, groupColors], groupIndex) => {
-                if (groupColors.length === 0) return;
-                
-                const group = document.createElement('div');
-                group.className = 'color-group';
-                group.style.animationDelay = `${groupIndex * 0.1}s`;
-                
-                const title = document.createElement('div');
-                title.className = 'color-group-title';
-                title.textContent = groupName;
-                group.appendChild(title);
-                
-                const colorsContainer = document.createElement('div');
-                colorsContainer.className = 'group-colors';
-                
-                groupColors.forEach((color, colorIndex) => {
+                // Add colors to region
+                regions[regionKey].colors.forEach((color, index) => {
                     const colorSquare = document.createElement('div');
-                    colorSquare.className = 'group-color';
+                    colorSquare.className = 'map-color';
                     colorSquare.style.backgroundColor = color.hex;
-                    colorSquare.style.setProperty('--index', colorIndex);
+                    colorSquare.style.animationDelay = `${index * 0.05}s`;
                     
                     // Set title based on original code
                     colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
@@ -1032,182 +705,270 @@
                         showNotification('Copied: ' + copyText);
                     });
                     
-                    colorsContainer.appendChild(colorSquare);
+                    region.appendChild(colorSquare);
                 });
-                
-                group.appendChild(colorsContainer);
-                relationshipView.appendChild(group);
-            });
+            }
             
-            viewContainer.appendChild(relationshipView);
+            map.appendChild(region);
         }
+    }
+    
+    viewContainer.appendChild(map);
+}
+
+// Render Relationship View
+function renderRelationshipView() {
+    const relationshipView = document.createElement('div');
+    relationshipView.className = 'relationship-view';
+    
+    // Group colors by hue categories
+    const groups = {
+        'Reds': [],
+        'Oranges': [],
+        'Yellows': [],
+        'Greens': [],
+        'Blues': [],
+        'Purples': [],
+        'Pinks': [],
+        'Neutrals': []
+    };
+    
+    colors.forEach(color => {
+        const hue = getHue(color.hex);
+        const sat = getSaturation(color.hex);
+        const light = getLightness(color.hex);
         
-        // Create a color square with animation and info overlay
-        function createColorSquare(color, index) {
-            const square = document.createElement('div');
-            square.className = 'color-square';
-            square.style.backgroundColor = color.hex;
-            square.style.animationDelay = `${index * 0.05}s`;
+        if (sat < 10 || light > 90 || light < 10) {
+            groups['Neutrals'].push(color);
+        } else if (hue >= 0 && hue < 30) {
+            groups['Reds'].push(color);
+        } else if (hue >= 30 && hue < 60) {
+            groups['Oranges'].push(color);
+        } else if (hue >= 60 && hue < 90) {
+            groups['Yellows'].push(color);
+        } else if (hue >= 90 && hue < 150) {
+            groups['Greens'].push(color);
+        } else if (hue >= 150 && hue < 240) {
+            groups['Blues'].push(color);
+        } else if (hue >= 240 && hue < 300) {
+            groups['Purples'].push(color);
+        } else {
+            groups['Pinks'].push(color);
+        }
+    });
+    
+    // Create groups
+    Object.entries(groups).forEach(([groupName, groupColors], groupIndex) => {
+        if (groupColors.length === 0) return;
+        
+        const group = document.createElement('div');
+        group.className = 'color-group';
+        group.style.animationDelay = `${groupIndex * 0.1}s`;
+        
+        const title = document.createElement('div');
+        title.className = 'color-group-title';
+        title.textContent = groupName;
+        group.appendChild(title);
+        
+        const colorsContainer = document.createElement('div');
+        colorsContainer.className = 'group-colors';
+        
+        groupColors.forEach((color, colorIndex) => {
+            const colorSquare = document.createElement('div');
+            colorSquare.className = 'group-color';
+            colorSquare.style.backgroundColor = color.hex;
+            colorSquare.style.setProperty('--index', colorIndex);
             
             // Set title based on original code
-            square.title = color.originalCode || color.hex;
+            colorSquare.title = `${color.originalCode || color.hex} - ${color.name}`;
             
-            // Add info overlay
-            const info = document.createElement('div');
-            info.className = 'color-info';
-            info.textContent = color.originalCode || color.hex;
-            square.appendChild(info);
-            
-            // Add click handler (copy color code)
-            square.addEventListener('click', function() {
+            colorSquare.addEventListener('click', function() {
+                // Copy original code
                 const copyText = color.originalCode || color.hex.substring(1);
                 navigator.clipboard.writeText(copyText);
-                this.classList.add('color-added');
+                this.style.boxShadow = '0 0 15px white';
                 setTimeout(() => {
-                    this.classList.remove('color-added');
-                }, 1000);
+                    this.style.boxShadow = '';
+                }, 500);
                 
                 // Show feedback
                 showNotification('Copied: ' + copyText);
             });
             
-            return square;
-        }
+            colorsContainer.appendChild(colorSquare);
+        });
         
-        // Update count with animation
-        function updateCount() {
-            const oldCount = parseInt(countElement.textContent);
-            const newCount = colors.length;
+        group.appendChild(colorsContainer);
+        relationshipView.appendChild(group);
+    });
+    
+    viewContainer.appendChild(relationshipView);
+}
+
+// Create a color square with animation and info overlay
+function createColorSquare(color, index) {
+    const square = document.createElement('div');
+    square.className = 'color-square';
+    square.style.backgroundColor = color.hex;
+    square.style.animationDelay = `${index * 0.05}s`;
+    
+    // Set title based on original code
+    square.title = color.originalCode || color.hex;
+    
+    // Add info overlay
+    const info = document.createElement('div');
+    info.className = 'color-info';
+    info.textContent = color.originalCode || color.hex;
+    square.appendChild(info);
+    
+    // Add click handler (copy color code)
+    square.addEventListener('click', function() {
+        const copyText = color.originalCode || color.hex.substring(1);
+        navigator.clipboard.writeText(copyText);
+        this.classList.add('color-added');
+        setTimeout(() => {
+            this.classList.remove('color-added');
+        }, 1000);
+        
+        // Show feedback
+        showNotification('Copied: ' + copyText);
+    });
+    
+    return square;
+}
+
+// Update count with animation
+function updateCount() {
+    const oldCount = parseInt(countElement.textContent);
+    const newCount = colors.length;
+    
+    // Animate count changing
+    if (oldCount !== newCount) {
+        countElement.textContent = oldCount;
+        
+        let current = oldCount;
+        const step = newCount > oldCount ? 1 : -1;
+        const interval = setInterval(() => {
+            current += step;
+            countElement.textContent = current;
             
-            // Animate count changing
-            if (oldCount !== newCount) {
-                countElement.textContent = oldCount;
-                
-                let current = oldCount;
-                const step = newCount > oldCount ? 1 : -1;
-                const interval = setInterval(() => {
-                    current += step;
-                    countElement.textContent = current;
-                    
-                    if (current === newCount) {
-                        clearInterval(interval);
-                    }
-                }, 50);
-            } else {
-                countElement.textContent = newCount;
+            if (current === newCount) {
+                clearInterval(interval);
             }
-        }
-        
-        // Format date (e.g., "Jan 1")
-        function formatDate(date) {
-            const options = { month: 'short', day: 'numeric' };
-            return date.toLocaleDateString(undefined, options);
-        }
-        
-        // Get random location
-        function getRandomLocation() {
-            const locations = [
-                { name: "Downtown", x: 0.2, y: 0.3 },
-                { name: "Market Street", x: 0.3, y: 0.4 },
-                { name: "Sunny Hills", x: 0.4, y: 0.5 },
-                { name: "Park District", x: 0.5, y: 0.6 },
-                { name: "Ocean View", x: 0.6, y: 0.4 },
-                { name: "Arts District", x: 0.7, y: 0.3 },
-                { name: "Historic Quarter", x: 0.8, y: 0.2 },
-                { name: "Fashion District", x: 0.6, y: 0.1 },
-                { name: "Tech Hub", x: 0.5, y: 0.2 },
-                { name: "Financial District", x: 0.4, y: 0.3 }
-            ];
-            
-            return locations[Math.floor(Math.random() * locations.length)];
-        }
-        
-        // Get hue value (0-360) from hex color
-        function getHue(hex) {
-            const rgb = hexToRgb(hex);
-            if (!rgb) return 0;
-            
-            const r = rgb.r / 255;
-            const g = rgb.g / 255;
-            const b = rgb.b / 255;
-            
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            const delta = max - min;
-            
-            let hue = 0;
-            
-            if (delta === 0) {
-                return 0;
-            }
-            
-            if (max === r) {
-                hue = ((g - b) / delta) % 6;
-            } else if (max === g) {
-                hue = (b - r) / delta + 2;
-            } else {
-                hue = (r - g) / delta + 4;
-            }
-            
-            hue = Math.round(hue * 60);
-            if (hue < 0) hue += 360;
-            
-            return hue;
-        }
-        
-        // Get saturation (0-100) from hex color
-        function getSaturation(hex) {
-            const rgb = hexToRgb(hex);
-            if (!rgb) return 0;
-            
-            const r = rgb.r / 255;
-            const g = rgb.g / 255;
-            const b = rgb.b / 255;
-            
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            const delta = max - min;
-            
-            const lightness = (max + min) / 2;
-            
-            let saturation = 0;
-            if (delta !== 0) {
-                saturation = delta / (1 - Math.abs(2 * lightness - 1));
-            }
-            
-            return Math.round(saturation * 100);
-        }
-        
-        // Get lightness (0-100) from hex color
-        function getLightness(hex) {
-            const rgb = hexToRgb(hex);
-            if (!rgb) return 0;
-            
-            const r = rgb.r / 255;
-            const g = rgb.g / 255;
-            const b = rgb.b / 255;
-            
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            
-            const lightness = (max + min) / 2;
-            
-            return Math.round(lightness * 100);
-        }
-        
-        // Convert hex to RGB
-        function hexToRgb(hex) {
-            // Remove # if present
-            hex = hex.replace(/^#/, '');
-            
-            // Parse hex values
-            const bigint = parseInt(hex, 16);
-            const r = (bigint >> 16) & 255;
-            const g = (bigint >> 8) & 255;
-            const b = bigint & 255;
-            
-            return { r, g, b };
-        }
-    </script>
-</body>
-</html>
+        }, 50);
+    } else {
+        countElement.textContent = newCount;
+    }
+}
+
+// Format date (e.g., "Jan 1")
+function formatDate(date) {
+    const options = { month: 'short', day: 'numeric' };
+    return date.toLocaleDateString(undefined, options);
+}
+
+// Get random location
+// Get random location
+function getRandomLocation() {
+    const locations = [
+        { name: "Downtown", x: 0.2, y: 0.3 },
+        { name: "Market Street", x: 0.3, y: 0.4 },
+        { name: "Sunny Hills", x: 0.4, y: 0.5 },
+        { name: "Park District", x: 0.5, y: 0.6 },
+        { name: "Ocean View", x: 0.6, y: 0.4 },
+        { name: "Arts District", x: 0.7, y: 0.3 },
+        { name: "Historic Quarter", x: 0.8, y: 0.2 },
+        { name: "Fashion District", x: 0.6, y: 0.1 },
+        { name: "Tech Hub", x: 0.5, y: 0.2 },
+        { name: "Financial District", x: 0.4, y: 0.3 }
+    ];
+    
+    return locations[Math.floor(Math.random() * locations.length)];
+}
+
+// Get hue value (0-360) from hex color
+function getHue(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    
+    let hue = 0;
+    
+    if (delta === 0) {
+        return 0;
+    }
+    
+    if (max === r) {
+        hue = ((g - b) / delta) % 6;
+    } else if (max === g) {
+        hue = (b - r) / delta + 2;
+    } else {
+        hue = (r - g) / delta + 4;
+    }
+    
+    hue = Math.round(hue * 60);
+    if (hue < 0) hue += 360;
+    
+    return hue;
+}
+
+// Get saturation (0-100) from hex color
+function getSaturation(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    
+    const lightness = (max + min) / 2;
+    
+    let saturation = 0;
+    if (delta !== 0) {
+        saturation = delta / (1 - Math.abs(2 * lightness - 1));
+    }
+    
+    return Math.round(saturation * 100);
+}
+
+// Get lightness (0-100) from hex color
+function getLightness(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    
+    const lightness = (max + min) / 2;
+    
+    return Math.round(lightness * 100);
+}
+
+// Convert hex to RGB
+function hexToRgb(hex) {
+    // Remove # if present
+    hex = hex.replace(/^#/, '');
+    
+    // Parse hex values
+    const bigint = parseInt(hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    
+    return { r, g, b };
+}

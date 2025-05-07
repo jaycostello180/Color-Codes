@@ -4,7 +4,7 @@ const q = faunadb.query;
 exports.handler = async () => {
   try {
     const client = new faunadb.Client({
-      secret: process.env.FAUNADB_SECRET_KEY,
+      secret: process.env.FAUNA_SECRET_KEY,
     });
 
     // Fauna query to get collections

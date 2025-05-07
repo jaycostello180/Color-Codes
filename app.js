@@ -882,17 +882,18 @@ function renderTimelineView() {
         // Set title based on original code
         marker.title = color.originalCode || color.hex;
         
-        // Add click handler
-        marker.addEventListener('click', function() {
-            // Copy original code
-            const copyText = color.originalCode || color.hex.substring(1);
-            navigator.clipboard.writeText(copyText);
-            this.style.boxShadow = '0 0 5px white';
-            }, 500);
-            
-            // Show feedback
-            showNotification('Copied: ' + copyText);
-        });
+      marker.addEventListener('click', function() {
+    // Copy original code
+    const copyText = color.originalCode || color.hex.substring(1);
+    navigator.clipboard.writeText(copyText);
+    this.style.boxShadow = '0 0 15px white';
+    setTimeout(() => {
+        this.style.boxShadow = '0 0 5px white';
+    }, 500);
+    
+    // Show feedback
+    showNotification('Copied: ' + copyText);
+});
         
         // Add date label
         const dateLabel = document.createElement('div');

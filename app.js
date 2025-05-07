@@ -83,12 +83,26 @@ let currentView = 'grid';
 // Function to fetch colors from the serverless function
 async function fetchColors() {
     try {
+        console.log('Attempting to fetch colors from the server...');
         const response = await fetch('/.netlify/functions/getColors');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const colors = await response.json();
-        return colors;
+        
+        if (!response.ok) {
+            console.error('Server response not ok:', response.status, response.statusText);
+            throw new Error('Network response was not ok');
+        }
+        
+        const colorsData = await response.json();
+        console.log('Successfully fetched colors:', colorsData);
+        
+        // Ensure dates are properly parsed as Date objects
+        return colorsData.map(color => ({
+            ...color,
+            dateAdded: new Date(color.dateAdded)
+        }));
     } catch (error) {
         console.error('Error fetching colors:', error);
+        // Fallback to local colors
+        console.log('Using local color data instead');
         return [];
     }
 }
@@ -100,6 +114,9 @@ async function addNewColorWithProximity(colorData, proximity) {
         
         const response = await fetch('/.netlify/functions/addColor', {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
                 ...colorData,
                 proximity
@@ -107,14 +124,25 @@ async function addNewColorWithProximity(colorData, proximity) {
         });
         
         if (!response.ok) {
+            console.error('Server response error:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('Error details:', errorText);
             throw new Error(`Network response not ok: ${response.status}`);
         }
         
         const result = await response.json();
-        console.log('Color added successfully:', result);
-        return result;
+        console.log('Color added successfully to database:', result);
+        
+        // Add to local array with proper date format
+        const newColor = {
+            ...result,
+            dateAdded: new Date(result.dateAdded)
+        };
+        
+        colors.push(newColor);
+        return newColor;
     } catch (error) {
-        console.error('Error adding color:', error);
+        console.error('Error adding color to database:', error);
         
         // Fallback: Add to local array if server fails
         const newColor = {
@@ -143,11 +171,21 @@ window.onload = async function() {
     // Add CSS for color spotlight to head
     addSpotlightStyles();
     
-    // Try to fetch colors from the server
-    const serverColors = await fetchColors();
-    // If we got colors from the server, use them
-    if (serverColors && serverColors.length > 0) {
-        colors = serverColors;
+    // First try to load colors from localStorage
+    const storedColors = loadColorsFromStorage();
+    if (storedColors && storedColors.length > 0) {
+        console.log('Using colors from localStorage:', storedColors);
+        colors = storedColors;
+    } else {
+        // If no localStorage colors, try to fetch from server
+        const serverColors = await fetchColors();
+        // If we got colors from the server, use them
+        if (serverColors && serverColors.length > 0) {
+            colors = serverColors;
+            console.log('Using server colors:', colors);
+        } else {
+            console.log('Using default colors:', colors);
+        }
     }
     
     renderView();
@@ -205,15 +243,23 @@ function updatePreviewAndFormat() {
         // Convert to hex for preview
         const hexColor = convertToHex(code, format);
         if (hexColor) {
+            console.log(`Converted ${code} to ${hexColor}`);
             preview.style.backgroundColor = hexColor;
+        } else {
+            console.warn(`Failed to convert ${code} to a valid hex color`);
         }
+    } else {
+        formatDisplay.textContent = "UNKNOWN FORMAT";
     }
 }
 
 // Detect color code format
 function detectFormat(code) {
+    // Normalize input by removing '#' if present for hex codes
+    const normalizedCode = code.startsWith('#') ? code.substring(1) : code;
+    
     for (const format of formatPatterns) {
-        if (format.pattern.test(code)) {
+        if (format.pattern.test(normalizedCode)) {
             return format;
         }
     }
@@ -222,9 +268,11 @@ function detectFormat(code) {
 
 // Convert color code to hex based on format
 function convertToHex(code, format) {
-    // If it's already a hex code
+    // If it's already a hex code (with or without #)
     if (format.name === "HEX") {
-        return format.prefix + code.toUpperCase();
+        // Remove # if present
+        const hexCode = code.startsWith('#') ? code.substring(1) : code;
+        return "#" + hexCode.toUpperCase();
     }
     
     // Check if it exists in our mapping
@@ -239,15 +287,20 @@ function convertToHex(code, format) {
         case "NISSAN":
             return approximateNissanColor(code);
         default:
+            console.warn(`No mapping found for ${code} and couldn't approximate`);
             return null;
     }
 }
 
 // Approximate Valspar color when not in mapping
 function approximateValsparColor(code) {
+    console.log(`Approximating Valspar color: ${code}`);
     // Format: XXXX-XXX (e.g., 8002-45C)
     const parts = code.split('-');
-    if (parts.length !== 2) return '#CCCCCC';
+    if (parts.length !== 2) {
+        console.warn(`Invalid Valspar format: ${code}`);
+        return '#CCCCCC';
+    }
     
     const baseCode = parts[0]; // e.g., "8002"
     const colorCode = parts[1]; // e.g., "45C"
@@ -255,6 +308,8 @@ function approximateValsparColor(code) {
     // Extract number and letter
     const number = parseInt(colorCode.slice(0, -1)) || 50;
     const letter = colorCode.slice(-1).toUpperCase();
+    
+    console.log(`Parsed Valspar code - Base: ${baseCode}, Number: ${number}, Letter: ${letter}`);
     
     // Basic color approximation based on the letter
     let r = 128, g = 128, b = 128;
@@ -293,11 +348,14 @@ function approximateValsparColor(code) {
     b = Math.floor(b * intensity + (255 - b * intensity) * (1 - intensity));
     
     // Convert to hex
-    return rgbToHex(r, g, b);
+    const hexColor = rgbToHex(r, g, b);
+    console.log(`Approximated ${code} to ${hexColor}`);
+    return hexColor;
 }
 
 // Approximate Nissan color when not in mapping
 function approximateNissanColor(code) {
+    console.log(`Approximating Nissan color: ${code}`);
     // For Nissan codes, use a hash-based approach for more consistent results
     let hash = 0;
     for (let i = 0; i < code.length; i++) {
@@ -315,30 +373,40 @@ function approximateNissanColor(code) {
     b = Math.abs(b % 256);
     
     // Convert to hex
-    return rgbToHex(r, g, b);
+    const hexColor = rgbToHex(r, g, b);
+    console.log(`Approximated ${code} to ${hexColor}`);
+    return hexColor;
 }
 
 // Convert RGB to hex
 function rgbToHex(r, g, b) {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+    // Ensure r, g, b are valid integers between 0-255
+    r = Math.max(0, Math.min(255, Math.round(r)));
+    g = Math.max(0, Math.min(255, Math.round(g)));
+    b = Math.max(0, Math.min(255, Math.round(b)));
+    
+    return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase();
 }
 
 // Add a new color
 function addNewColor() {
     const code = colorInput.value.trim();
-    if (!code) return;
+    if (!code) {
+        showNotification('Please enter a color code.');
+        return;
+    }
     
     // Detect format
     const format = detectFormat(code);
     if (!format) {
-        alert('Unknown color code format. Please try again.');
+        showNotification('Unknown color code format. Please try again.');
         return;
     }
     
     // Convert to hex
     const hexColor = convertToHex(code, format);
     if (!hexColor) {
-        alert('Could not convert color code to hex.');
+        showNotification('Could not convert color code to hex.');
         return;
     }
     
@@ -820,426 +888,3 @@ function renderTimelineView() {
             
             timeline.appendChild(marker);
         });
-    }
-    
-    viewContainer.appendChild(timeline);
-}
-
-// Render Galaxy View
-function renderGalaxyView() {
-    const galaxyView = document.createElement('div');
-    galaxyView.className = 'galaxy-view';
-    
-    // Add galaxy center
-    const center = document.createElement('div');
-    center.className = 'galaxy-center';
-    galaxyView.appendChild(center);
-    
-    // Calculate coordinates for each color based on proximity
-    colors.forEach((color, index) => {
-        // Get proximity value (defaults to neutral if not set)
-        const proximityValue = proximityValues[color.proximity || 'neutral'];
-        
-        // Calculate angle (distribute colors evenly around the center)
-        const angle = (index / colors.length) * Math.PI * 2;
-        
-        // Calculate distance from center based on proximity
-        // Very close = near center, very distant = far from center
-        const distance = proximityValue * 45; // % of available space
-        
-        // Calculate x and y coordinates (center of galaxy is at 50%)
-        const x = 50 + Math.cos(angle) * distance;
-        const y = 50 + Math.sin(angle) * distance;
-        
-        // Create star for this color
-        const star = document.createElement('div');
-        star.className = 'galaxy-star';
-        star.style.backgroundColor = color.hex;
-        star.style.left = `${x}%`;
-        star.style.top = `${y}%`;
-        
-        // Size based on inverse of proximity (closer feels bigger)
-        const size = 40 + ((1 - proximityValue) * 20);
-        star.style.width = `${size}px`;
-        star.style.height = `${size}px`;
-        star.style.margin = `-${size/2}px`;
-        
-        // Set animation delay for twinkling effect
-        star.style.animationDelay = `${index * 0.5}s`;
-        
-        // Add tooltip
-        star.title = `${color.name} - ${color.proximity ? color.proximity.replace('-', ' ') : 'neutral'}`;
-        
-        // Add click handler
-        star.addEventListener('click', function() {
-            // Copy original code
-            const copyText = color.originalCode || color.hex.substring(1);
-            navigator.clipboard.writeText(copyText);
-            
-            // Visual feedback
-            this.style.boxShadow = '0 0 25px white';
-            setTimeout(() => {
-                this.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.5)';
-            }, 500);
-            
-            // Show notification
-            showNotification('Copied: ' + copyText);
-        });
-        
-        galaxyView.appendChild(star);
-    });
-    
-    viewContainer.appendChild(galaxyView);
-}
-
-// Render Color Theory View
-function renderColorTheoryView() {
-    const theoryView = document.createElement('div');
-    theoryView.className = 'color-theory-view';
-    
-    // Get all unique base colors
-    const baseColors = colors.slice(0, Math.min(colors.length, 5));
-    
-    // 1. Complementary colors section
-    renderColorTheorySection(
-        theoryView,
-        baseColors,
-        'complementary',
-        'Complementary Colors',
-        'Colors directly opposite each other on the color wheel. High contrast and vibrant combinations.',
-        getComplementaryColors
-    );
-    
-    // 2. Analogous colors section
-    renderColorTheorySection(
-        theoryView,
-        baseColors,
-        'analogous',
-        'Analogous Colors',
-        'Colors that are adjacent to each other on the color wheel. Harmonious and natural combinations.',
-        getAnalogousColors
-    );
-    
-    // 3. Triadic colors section
-    renderColorTheorySection(
-        theoryView,
-        baseColors,
-        'triadic',
-        'Triadic Colors',
-        'Three colors equally spaced around the color wheel. Balanced and vibrant combinations.',
-        getTriadicColors
-    );
-    
-    // 4. Split complementary colors section
-    renderColorTheorySection(
-        theoryView,
-        baseColors,
-        'split',
-        'Split Complementary',
-        'A base color plus two colors adjacent to its complement. High contrast with less tension.',
-        getSplitComplementaryColors
-    );
-    
-    // 5. Monochromatic colors section
-    renderColorTheorySection(
-        theoryView,
-        baseColors,
-        'monochromatic',
-        'Monochromatic',
-        'Different shades, tints, and tones of a single color. Elegant and cohesive combinations.',
-        getMonochromaticColors
-    );
-    
-    viewContainer.appendChild(theoryView);
-}
-
-// Helper function to render a color theory section
-function renderColorTheorySection(container, baseColors, type, title, description, getColorsFn) {
-    const section = document.createElement('div');
-    section.className = 'color-theory-section';
-    
-    // Add title
-    const titleElem = document.createElement('div');
-    titleElem.className = 'color-theory-title';
-    titleElem.textContent = title;
-    section.appendChild(titleElem);
-    
-    // Add description
-    const descElem = document.createElement('div');
-    descElem.className = 'color-theory-description';
-    descElem.textContent = description;
-    section.appendChild(descElem);
-    
-    // Container for color combinations
-    const combosContainer = document.createElement('div');
-    combosContainer.className = 'color-theory-combinations';
-    
-    // Generate combinations for each base color
-    baseColors.forEach(baseColor => {
-        // Get related colors based on the color theory type
-        const relatedColors = getColorsFn(baseColor.hex);
-        
-        // Create combination element
-        const combo = document.createElement('div');
-        combo.className = 'color-theory-combination';
-        
-        // Create swatches container
-        const swatches = document.createElement('div');
-        swatches.className = 'color-theory-swatches';
-        
-        // Add base color swatch
-        const baseSwatch = document.createElement('div');
-        baseSwatch.className = 'color-theory-swatch';
-        baseSwatch.style.backgroundColor = baseColor.hex;
-        baseSwatch.title = baseColor.name;
-        swatches.appendChild(baseSwatch);
-        
-        // Add related color swatches
-        relatedColors.forEach(color => {
-            const swatch = document.createElement('div');
-            swatch.className = 'color-theory-swatch';
-            swatch.style.backgroundColor = color;
-            swatch.title = color;
-            
-            // Add click handler to copy color code
-            swatch.addEventListener('click', function() {
-                const copyText = color.substring(1); // Remove # from hex
-                navigator.clipboard.writeText(copyText);
-                
-                // Visual feedback
-                this.style.boxShadow = '0 0 15px white';
-                setTimeout(() => {
-                    this.style.boxShadow = '';
-                }, 500);
-                
-                // Show notification
-                showNotification('Copied: ' + copyText);
-            });
-            
-            swatches.appendChild(swatch);
-        });
-        
-        // Add swatches to combo
-        combo.appendChild(swatches);
-        
-        // Add info text
-        const info = document.createElement('div');
-        info.className = 'color-theory-info';
-        info.textContent = `${baseColor.name} ${type}`;
-        combo.appendChild(info);
-        
-        // Add combo to container
-        combosContainer.appendChild(combo);
-    });
-    
-    section.appendChild(combosContainer);
-    container.appendChild(section);
-}
-
-// Get complementary color
-function getComplementaryColors(baseHex) {
-    const hue = getHue(baseHex);
-    const complementaryHue = (hue + 180) % 360;
-    return [getColorFromHue(complementaryHue)];
-}
-
-// Get analogous colors
-function getAnalogousColors(baseHex) {
-    const hue = getHue(baseHex);
-    const hue1 = (hue + 30) % 360;
-    const hue2 = (hue + 330) % 360;
-    return [getColorFromHue(hue1), getColorFromHue(hue2)];
-}
-
-// Get triadic colors
-function getTriadicColors(baseHex) {
-    const hue = getHue(baseHex);
-    const hue1 = (hue + 120) % 360;
-    const hue2 = (hue + 240) % 360;
-    return [getColorFromHue(hue1), getColorFromHue(hue2)];
-}
-
-// Get split complementary colors
-function getSplitComplementaryColors(baseHex) {
-    const hue = getHue(baseHex);
-    const complementaryHue = (hue + 180) % 360;
-    const hue1 = (complementaryHue + 30) % 360;
-    const hue2 = (complementaryHue + 330) % 360;
-    return [getColorFromHue(hue1), getColorFromHue(hue2)];
-}
-
-// Get monochromatic colors
-function getMonochromaticColors(baseHex) {
-    const hue = getHue(baseHex);
-    const sat = getSaturation(baseHex);
-    const light = getLightness(baseHex);
-    
-    // Create lighter and darker versions
-    const lighter = hslToHex(hue, Math.min(sat, 100), Math.min(light + 30, 100));
-    const darker = hslToHex(hue, Math.min(sat, 100), Math.max(light - 30, 0));
-    
-    return [lighter, darker];
-}
-
-// Create a color from a hue value
-function getColorFromHue(hue) {
-    return hslToHex(hue, 70, 50);
-}
-
-// Convert HSL to hex
-function hslToHex(h, s, l) {
-    l /= 100;
-    const a = s * Math.min(l, 1 - l) / 100;
-    const f = n => {
-        const k = (n + h / 30) % 12;
-        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-        return Math.round(255 * color).toString(16).padStart(2, '0');
-    };
-    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-}
-
-// Create a color square with animation and info overlay
-function createColorSquare(color, index) {
-    const square = document.createElement('div');
-    square.className = 'color-square';
-    square.style.backgroundColor = color.hex;
-    square.style.animationDelay = `${index * 0.05}s`;
-    
-    // Set title based on original code
-    square.title = color.originalCode || color.hex;
-    
-    // Add info overlay
-    const info = document.createElement('div');
-    info.className = 'color-info';
-    info.textContent = color.originalCode || color.hex;
-    square.appendChild(info);
-    
-    // Add click handler (copy color code)
-    square.addEventListener('click', function() {
-        const copyText = color.originalCode || color.hex.substring(1);
-        navigator.clipboard.writeText(copyText);
-        this.classList.add('color-added');
-        setTimeout(() => {
-            this.classList.remove('color-added');
-        }, 1000);
-        
-        // Show feedback
-        showNotification('Copied: ' + copyText);
-    });
-    
-    return square;
-}
-
-// Update count with animation
-function updateCount() {
-    const oldCount = parseInt(countElement.textContent);
-    const newCount = colors.length;
-    
-    // Animate count changing
-    if (oldCount !== newCount) {
-        countElement.textContent = oldCount;
-        let current = oldCount;
-        const step = newCount > oldCount ? 1 : -1;
-        const interval = setInterval(() => {
-            current += step;
-            countElement.textContent = current;
-            if (current === newCount) {
-                clearInterval(interval);
-            }
-        }, 50);
-    } else {
-        countElement.textContent = newCount;
-    }
-}
-
-// Format date (e.g., "Jan 1")
-function formatDate(date) {
-    const options = { month: 'short', day: 'numeric' };
-    return date.toLocaleDateString(undefined, options);
-}
-
-// Get hue value (0-360) from hex color
-function getHue(hex) {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return 0;
-    
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-    
-    let hue = 0;
-    if (delta === 0) {
-        return 0;
-    }
-    
-    if (max === r) {
-        hue = ((g - b) / delta) % 6;
-    } else if (max === g) {
-        hue = (b - r) / delta + 2;
-    } else {
-        hue = (r - g) / delta + 4;
-    }
-    
-    hue = Math.round(hue * 60);
-    if (hue < 0) hue += 360;
-    
-    return hue;
-}
-
-// Get saturation (0-100) from hex color
-function getSaturation(hex) {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return 0;
-    
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-    
-    const lightness = (max + min) / 2;
-    let saturation = 0;
-    
-    if (delta !== 0) {
-        saturation = delta / (1 - Math.abs(2 * lightness - 1));
-    }
-    
-    return Math.round(saturation * 100);
-}
-
-// Get lightness (0-100) from hex color
-function getLightness(hex) {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return 0;
-    
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    
-    const lightness = (max + min) / 2;
-    
-    return Math.round(lightness * 100);
-}
-
-// Convert hex to RGB
-function hexToRgb(hex) {
-    // Remove # if present
-    hex = hex.replace(/^#/, '');
-    
-    // Parse hex values
-    const bigint = parseInt(hex, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    
-    return { r, g, b };
-}

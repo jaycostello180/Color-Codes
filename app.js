@@ -1,4 +1,4 @@
-// Enhanced color collection with metadata 
+// Default color collection with initial samples
 let colors = [ 
     { 
         hex: "#FF0000", 
@@ -80,38 +80,77 @@ let preview, colorInput, formatDisplay, addBtn, viewContainer, countElement, vie
 // Current view
 let currentView = 'grid';
 
+// LocalStorage functions
+function saveColorsToStorage() {
+    try {
+        localStorage.setItem('colorCollective', JSON.stringify(colors));
+        console.log('Saved', colors.length, 'colors to localStorage');
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
+}
+
+function loadColorsFromStorage() {
+    try {
+        const stored = localStorage.getItem('colorCollective');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            console.log('Loaded', parsed.length, 'colors from localStorage');
+            
+            // Convert date strings back to Date objects
+            return parsed.map(color => ({
+                ...color,
+                dateAdded: new Date(color.dateAdded)
+            }));
+        }
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+    }
+    return null;
+}
+
 // Function to fetch colors from the serverless function
 async function fetchColors() {
     try {
-        console.log('Attempting to fetch colors from the server...');
+        console.log('Attempting to fetch colors from server...');
         const response = await fetch('/.netlify/functions/getColors');
         
         if (!response.ok) {
-            console.error('Server response not ok:', response.status, response.statusText);
-            throw new Error('Network response was not ok');
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
         }
         
-        const colorsData = await response.json();
-        console.log('Successfully fetched colors:', colorsData);
+        const data = await response.json();
+        console.log('Successfully fetched', data.length, 'colors from server');
         
-        // Ensure dates are properly parsed as Date objects
-        return colorsData.map(color => ({
+        // Convert date strings to Date objects
+        return data.map(color => ({
             ...color,
             dateAdded: new Date(color.dateAdded)
         }));
     } catch (error) {
-        console.error('Error fetching colors:', error);
-        // Fallback to local colors
-        console.log('Using local color data instead');
-        return [];
+        console.error('Error fetching colors from server:', error);
+        return null;
     }
 }
 
 // Function to add a new color with proximity data
 async function addNewColorWithProximity(colorData, proximity) {
     try {
-        console.log('Attempting to add color to database:', colorData);
+        console.log('Adding new color:', colorData.hex, 'with proximity:', proximity);
         
+        // First add to local array for immediate display
+        const newColor = {
+            ...colorData,
+            proximity,
+            dateAdded: new Date()
+        };
+        
+        colors.push(newColor);
+        
+        // Save to localStorage
+        saveColorsToStorage();
+        
+        // Then try to save to server
         const response = await fetch('/.netlify/functions/addColor', {
             method: 'POST',
             headers: {
@@ -124,40 +163,24 @@ async function addNewColorWithProximity(colorData, proximity) {
         });
         
         if (!response.ok) {
-            console.error('Server response error:', response.status, response.statusText);
-            const errorText = await response.text();
-            console.error('Error details:', errorText);
-            throw new Error(`Network response not ok: ${response.status}`);
+            console.warn('Server save failed, but color was added locally');
+            return newColor;
         }
         
         const result = await response.json();
-        console.log('Color added successfully to database:', result);
-        
-        // Add to local array with proper date format
-        const newColor = {
-            ...result,
-            dateAdded: new Date(result.dateAdded)
-        };
-        
-        colors.push(newColor);
-        return newColor;
+        console.log('Color successfully saved to server');
+        return result;
     } catch (error) {
-        console.error('Error adding color to database:', error);
-        
-        // Fallback: Add to local array if server fails
-        const newColor = {
-            ...colorData,
-            proximity,
-            dateAdded: new Date()
-        };
-        console.log('Adding color locally instead:', newColor);
-        colors.push(newColor);
-        return newColor;
+        console.error('Error in addNewColorWithProximity:', error);
+        // We already added it locally, so no need to do anything else
+        return colorData;
     }
 }
 
 // Initialize
 window.onload = async function() {
+    console.log('Initializing Color Collective...');
+    
     // Get DOM elements
     preview = document.getElementById('preview');
     colorInput = document.getElementById('color-code');
@@ -171,44 +194,40 @@ window.onload = async function() {
     // Add CSS for color spotlight to head
     addSpotlightStyles();
     
-    // First try to load colors from localStorage
+    // Try to load colors from localStorage first
     const storedColors = loadColorsFromStorage();
+    
     if (storedColors && storedColors.length > 0) {
-        console.log('Using colors from localStorage:', storedColors);
         colors = storedColors;
+        console.log('Using colors from localStorage');
     } else {
-        // If no localStorage colors, try to fetch from server
+        // If no localStorage, try server
         const serverColors = await fetchColors();
-        // If we got colors from the server, use them
         if (serverColors && serverColors.length > 0) {
             colors = serverColors;
-            console.log('Using server colors:', colors);
+            console.log('Using colors from server');
+            // Save to localStorage for next time
+            saveColorsToStorage();
         } else {
-            console.log('Using default colors:', colors);
+            console.log('Using default color set');
         }
     }
     
+    // Render the initial view
     renderView();
     updateCount();
     
-    // Color input preview and format detection
-    colorInput.addEventListener('input', function() {
-        updatePreviewAndFormat();
-    });
+    // Set up event listeners
+    colorInput.addEventListener('input', updatePreviewAndFormat);
     
-    // Add color button
-    addBtn.addEventListener('click', function() {
-        addNewColor();
-    });
+    addBtn.addEventListener('click', addNewColor);
     
-    // Add color on Enter key
     colorInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             addNewColor();
         }
     });
     
-    // View buttons
     viewButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             viewButtons.forEach(b => b.classList.remove('active'));
@@ -223,43 +242,40 @@ window.onload = async function() {
             }, 300);
         });
     });
+    
+    console.log('Initialization complete');
 };
 
 // Update color preview and detect format
 function updatePreviewAndFormat() {
     const code = colorInput.value.trim();
     
-    // Reset
+    // Reset preview and format display
     preview.style.backgroundColor = '';
     formatDisplay.textContent = '';
     
     if (!code) return;
     
+    // Normalize input by removing '#' if present for hex codes
+    const normalizedCode = code.startsWith('#') ? code.substring(1) : code;
+    
     // Detect format
-    const format = detectFormat(code);
+    const format = detectFormat(normalizedCode);
     if (format) {
         formatDisplay.textContent = format.name + " FORMAT";
         
         // Convert to hex for preview
-        const hexColor = convertToHex(code, format);
+        const hexColor = convertToHex(normalizedCode, format);
         if (hexColor) {
-            console.log(`Converted ${code} to ${hexColor}`);
             preview.style.backgroundColor = hexColor;
-        } else {
-            console.warn(`Failed to convert ${code} to a valid hex color`);
         }
-    } else {
-        formatDisplay.textContent = "UNKNOWN FORMAT";
     }
 }
 
 // Detect color code format
 function detectFormat(code) {
-    // Normalize input by removing '#' if present for hex codes
-    const normalizedCode = code.startsWith('#') ? code.substring(1) : code;
-    
     for (const format of formatPatterns) {
-        if (format.pattern.test(normalizedCode)) {
+        if (format.pattern.test(code)) {
             return format;
         }
     }
@@ -268,11 +284,9 @@ function detectFormat(code) {
 
 // Convert color code to hex based on format
 function convertToHex(code, format) {
-    // If it's already a hex code (with or without #)
+    // If it's already a hex code
     if (format.name === "HEX") {
-        // Remove # if present
-        const hexCode = code.startsWith('#') ? code.substring(1) : code;
-        return "#" + hexCode.toUpperCase();
+        return "#" + code.toUpperCase();
     }
     
     // Check if it exists in our mapping
@@ -287,20 +301,15 @@ function convertToHex(code, format) {
         case "NISSAN":
             return approximateNissanColor(code);
         default:
-            console.warn(`No mapping found for ${code} and couldn't approximate`);
             return null;
     }
 }
 
 // Approximate Valspar color when not in mapping
 function approximateValsparColor(code) {
-    console.log(`Approximating Valspar color: ${code}`);
     // Format: XXXX-XXX (e.g., 8002-45C)
     const parts = code.split('-');
-    if (parts.length !== 2) {
-        console.warn(`Invalid Valspar format: ${code}`);
-        return '#CCCCCC';
-    }
+    if (parts.length !== 2) return '#CCCCCC';
     
     const baseCode = parts[0]; // e.g., "8002"
     const colorCode = parts[1]; // e.g., "45C"
@@ -308,8 +317,6 @@ function approximateValsparColor(code) {
     // Extract number and letter
     const number = parseInt(colorCode.slice(0, -1)) || 50;
     const letter = colorCode.slice(-1).toUpperCase();
-    
-    console.log(`Parsed Valspar code - Base: ${baseCode}, Number: ${number}, Letter: ${letter}`);
     
     // Basic color approximation based on the letter
     let r = 128, g = 128, b = 128;
@@ -348,14 +355,11 @@ function approximateValsparColor(code) {
     b = Math.floor(b * intensity + (255 - b * intensity) * (1 - intensity));
     
     // Convert to hex
-    const hexColor = rgbToHex(r, g, b);
-    console.log(`Approximated ${code} to ${hexColor}`);
-    return hexColor;
+    return rgbToHex(r, g, b);
 }
 
 // Approximate Nissan color when not in mapping
 function approximateNissanColor(code) {
-    console.log(`Approximating Nissan color: ${code}`);
     // For Nissan codes, use a hash-based approach for more consistent results
     let hash = 0;
     for (let i = 0; i < code.length; i++) {
@@ -373,17 +377,14 @@ function approximateNissanColor(code) {
     b = Math.abs(b % 256);
     
     // Convert to hex
-    const hexColor = rgbToHex(r, g, b);
-    console.log(`Approximated ${code} to ${hexColor}`);
-    return hexColor;
+    return rgbToHex(r, g, b);
 }
 
 // Convert RGB to hex
 function rgbToHex(r, g, b) {
-    // Ensure r, g, b are valid integers between 0-255
-    r = Math.max(0, Math.min(255, Math.round(r)));
-    g = Math.max(0, Math.min(255, Math.round(g)));
-    b = Math.max(0, Math.min(255, Math.round(b)));
+    r = Math.min(255, Math.max(0, Math.round(r)));
+    g = Math.min(255, Math.max(0, Math.round(g)));
+    b = Math.min(255, Math.max(0, Math.round(b)));
     
     return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase();
 }
@@ -392,31 +393,34 @@ function rgbToHex(r, g, b) {
 function addNewColor() {
     const code = colorInput.value.trim();
     if (!code) {
-        showNotification('Please enter a color code.');
+        showNotification('Please enter a color code');
         return;
     }
     
+    // Normalize input by removing '#' if present for hex codes
+    const normalizedCode = code.startsWith('#') ? code.substring(1) : code;
+    
     // Detect format
-    const format = detectFormat(code);
+    const format = detectFormat(normalizedCode);
     if (!format) {
-        showNotification('Unknown color code format. Please try again.');
+        showNotification('Unknown color code format');
         return;
     }
     
     // Convert to hex
-    const hexColor = convertToHex(code, format);
+    const hexColor = convertToHex(normalizedCode, format);
     if (!hexColor) {
-        showNotification('Could not convert color code to hex.');
+        showNotification('Could not convert color code to hex');
         return;
     }
     
     // Get color name
-    let colorName = getColorName(hexColor, code, format.name);
+    let colorName = getColorName(hexColor, normalizedCode, format.name);
     
     // Create a new color object with metadata
     const newColor = {
         hex: hexColor,
-        originalCode: code,
+        originalCode: normalizedCode,
         name: colorName
     };
     
@@ -705,6 +709,9 @@ function animateColorJoining(spotlight, color) {
             
             // Show notification
             showNotification('Color added to collective!');
+            
+            // Save to localStorage
+            saveColorsToStorage();
         }, 500);
     }, 100);
 }
@@ -782,10 +789,10 @@ function renderView() {
         case 'timeline':
             renderTimelineView();
             break;
-        case 'map': // Replace map with galaxy view
+        case 'map': // Galaxy view
             renderGalaxyView();
             break;
-        case 'relationship': // Enhanced with color theory
+        case 'relationship': // Color theory
             renderColorTheoryView();
             break;
     }
@@ -832,59 +839,521 @@ function renderTimelineView() {
     line.className = 'timeline-line';
     timeline.appendChild(line);
     
+    if (colors.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.textContent = 'No colors in the collection yet';
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.marginTop = '40px';
+        timeline.appendChild(emptyMessage);
+        viewContainer.appendChild(timeline);
+        return;
+    }
+    
     // Sort colors by date
     const sortedColors = [...colors].sort((a, b) => {
-        // Convert to Date objects if they're strings
-        const dateA = typeof a.dateAdded === 'string' ? new Date(a.dateAdded) : a.dateAdded;
-        const dateB = typeof b.dateAdded === 'string' ? new Date(b.dateAdded) : b.dateAdded;
+        // Ensure we're comparing Date objects
+        const dateA = a.dateAdded instanceof Date ? a.dateAdded : new Date(a.dateAdded);
+        const dateB = b.dateAdded instanceof Date ? b.dateAdded : new Date(b.dateAdded);
         return dateA - dateB;
     });
     
-    if (sortedColors.length > 0) {
-        // Find date range
-        const startDate = typeof sortedColors[0].dateAdded === 'string' ? 
-            new Date(sortedColors[0].dateAdded) : sortedColors[0].dateAdded;
+    // Find date range
+    const startDate = sortedColors[0].dateAdded instanceof Date ? 
+        sortedColors[0].dateAdded : new Date(sortedColors[0].dateAdded);
+    
+    const endDate = sortedColors[sortedColors.length - 1].dateAdded instanceof Date ? 
+        sortedColors[sortedColors.length - 1].dateAdded : new Date(sortedColors[sortedColors.length - 1].dateAdded);
+    
+    const dateRange = endDate - startDate || 1; // Avoid division by zero
+    
+    sortedColors.forEach((color, index) => {
+        const colorDate = color.dateAdded instanceof Date ? 
+            color.dateAdded : new Date(color.dateAdded);
         
-        const endDate = typeof sortedColors[sortedColors.length - 1].dateAdded === 'string' ? 
-            new Date(sortedColors[sortedColors.length - 1].dateAdded) : sortedColors[sortedColors.length - 1].dateAdded;
+        const position = (colorDate - startDate) / dateRange;
         
-        const dateRange = endDate - startDate;
+        // Create marker
+        const marker = document.createElement('div');
+        marker.className = 'timeline-marker';
+        marker.style.backgroundColor = color.hex;
+        marker.style.left = `${position * 100}%`;
+        marker.style.animationDelay = `${index * 0.05}s`;
         
-        sortedColors.forEach((color, index) => {
-            const colorDate = typeof color.dateAdded === 'string' ? 
-                new Date(color.dateAdded) : color.dateAdded;
+        // Set title based on original code
+        marker.title = color.originalCode || color.hex;
+        
+        // Add click handler
+        marker.addEventListener('click', function() {
+            // Copy original code
+            const copyText = color.originalCode || color.hex.substring(1);
+            navigator.clipboard.writeText(copyText);
+            this.style.boxShadow = '0 0 5px white';
+            }, 500);
             
-            const position = dateRange > 0 ? (colorDate - startDate) / dateRange : 0.5;
+            // Show feedback
+            showNotification('Copied: ' + copyText);
+        });
+        
+        // Add date label
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'timeline-date';
+        dateLabel.textContent = formatDate(colorDate);
+        marker.appendChild(dateLabel);
+        
+        timeline.appendChild(marker);
+    });
+    
+    viewContainer.appendChild(timeline);
+}
+
+// Render Galaxy View
+function renderGalaxyView() {
+    const galaxyView = document.createElement('div');
+    galaxyView.className = 'galaxy-view';
+    
+    // Add galaxy center
+    const center = document.createElement('div');
+    center.className = 'galaxy-center';
+    galaxyView.appendChild(center);
+    
+    if (colors.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.textContent = 'No colors in the collection yet';
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.marginTop = '300px';
+        emptyMessage.style.color = 'cyan';
+        galaxyView.appendChild(emptyMessage);
+        viewContainer.appendChild(galaxyView);
+        return;
+    }
+    
+    // Calculate coordinates for each color based on proximity
+    colors.forEach((color, index) => {
+        // Get proximity value (defaults to neutral if not set)
+        const proximityValue = proximityValues[color.proximity || 'neutral'];
+        
+        // Calculate angle (distribute colors evenly around the center)
+        const angle = (index / colors.length) * Math.PI * 2;
+        
+        // Calculate distance from center based on proximity
+        // Very close = near center, very distant = far from center
+        const distance = proximityValue * 45; // % of available space
+        
+        // Calculate x and y coordinates (center of galaxy is at 50%)
+        const x = 50 + Math.cos(angle) * distance;
+        const y = 50 + Math.sin(angle) * distance;
+        
+        // Create star for this color
+        const star = document.createElement('div');
+        star.className = 'galaxy-star';
+        star.style.backgroundColor = color.hex;
+        star.style.left = `${x}%`;
+        star.style.top = `${y}%`;
+        
+        // Size based on inverse of proximity (closer feels bigger)
+        const size = 40 + ((1 - proximityValue) * 20);
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.margin = `-${size/2}px`;
+        
+        // Set animation delay for twinkling effect
+        star.style.animationDelay = `${index * 0.5}s`;
+        
+        // Add tooltip
+        star.title = `${color.name} - ${color.proximity ? color.proximity.replace('-', ' ') : 'neutral'}`;
+        
+        // Add click handler
+        star.addEventListener('click', function() {
+            // Copy original code
+            const copyText = color.originalCode || color.hex.substring(1);
+            navigator.clipboard.writeText(copyText);
             
-            // Create marker
-            const marker = document.createElement('div');
-            marker.className = 'timeline-marker';
-            marker.style.backgroundColor = color.hex;
-            marker.style.left = `${position * 100}%`;
-            marker.style.animationDelay = `${index * 0.05}s`;
+            // Visual feedback
+            this.style.boxShadow = '0 0 25px white';
+            setTimeout(() => {
+                this.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.5)';
+            }, 500);
             
-            // Set title based on original code
-            marker.title = color.originalCode || color.hex;
+            // Show notification
+            showNotification('Copied: ' + copyText);
+        });
+        
+        galaxyView.appendChild(star);
+    });
+    
+    viewContainer.appendChild(galaxyView);
+}
+
+// Render Color Theory View
+function renderColorTheoryView() {
+    const theoryView = document.createElement('div');
+    theoryView.className = 'color-theory-view';
+    
+    if (colors.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.textContent = 'No colors in the collection yet';
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.marginTop = '40px';
+        theoryView.appendChild(emptyMessage);
+        viewContainer.appendChild(theoryView);
+        return;
+    }
+    
+    // Get a limited set of base colors to avoid overwhelming the view
+    const baseColors = colors.slice(0, Math.min(colors.length, 5));
+    
+    // 1. Complementary colors section
+    renderColorTheorySection(
+        theoryView,
+        baseColors,
+        'complementary',
+        'Complementary Colors',
+        'Colors directly opposite each other on the color wheel. High contrast and vibrant combinations.',
+        getComplementaryColors
+    );
+    
+    // 2. Analogous colors section
+    renderColorTheorySection(
+        theoryView,
+        baseColors,
+        'analogous',
+        'Analogous Colors',
+        'Colors adjacent on the color wheel. Harmonious and natural combinations.',
+        getAnalogousColors
+    );
+    
+    // 3. Triadic colors section
+    renderColorTheorySection(
+        theoryView,
+        baseColors,
+        'triadic',
+        'Triadic Colors',
+        'Three colors equally spaced around the color wheel. Balanced and vibrant combinations.',
+        getTriadicColors
+    );
+    
+    // 4. Split complementary colors section
+    renderColorTheorySection(
+        theoryView,
+        baseColors,
+        'split',
+        'Split Complementary',
+        'A base color plus two colors adjacent to its complement. High contrast with less tension.',
+        getSplitComplementaryColors
+    );
+    
+    // 5. Monochromatic colors section
+    renderColorTheorySection(
+        theoryView,
+        baseColors,
+        'monochromatic',
+        'Monochromatic',
+        'Different shades, tints, and tones of a single color. Elegant and cohesive combinations.',
+        getMonochromaticColors
+    );
+    
+    viewContainer.appendChild(theoryView);
+}
+
+// Helper function to render a color theory section
+function renderColorTheorySection(container, baseColors, type, title, description, getColorsFn) {
+    const section = document.createElement('div');
+    section.className = 'color-theory-section';
+    
+    // Add title
+    const titleElem = document.createElement('div');
+    titleElem.className = 'color-theory-title';
+    titleElem.textContent = title;
+    section.appendChild(titleElem);
+    
+    // Add description
+    const descElem = document.createElement('div');
+    descElem.className = 'color-theory-description';
+    descElem.textContent = description;
+    section.appendChild(descElem);
+    
+    // Container for color combinations
+    const combosContainer = document.createElement('div');
+    combosContainer.className = 'color-theory-combinations';
+    
+    // Generate combinations for each base color
+    baseColors.forEach(baseColor => {
+        // Get related colors based on the color theory type
+        const relatedColors = getColorsFn(baseColor.hex);
+        
+        // Create combination element
+        const combo = document.createElement('div');
+        combo.className = 'color-theory-combination';
+        
+        // Create swatches container
+        const swatches = document.createElement('div');
+        swatches.className = 'color-theory-swatches';
+        
+        // Add base color swatch
+        const baseSwatch = document.createElement('div');
+        baseSwatch.className = 'color-theory-swatch';
+        baseSwatch.style.backgroundColor = baseColor.hex;
+        baseSwatch.title = baseColor.name;
+        swatches.appendChild(baseSwatch);
+        
+        // Add related color swatches
+        relatedColors.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-theory-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.title = color;
             
-            // Add click handler
-            marker.addEventListener('click', function() {
-                // Copy original code
-                const copyText = color.originalCode || color.hex.substring(1);
+            // Add click handler to copy color code
+            swatch.addEventListener('click', function() {
+                const copyText = color.substring(1); // Remove # from hex
                 navigator.clipboard.writeText(copyText);
+                
+                // Visual feedback
                 this.style.boxShadow = '0 0 15px white';
                 setTimeout(() => {
-                    this.style.boxShadow = '0 0 5px white';
+                    this.style.boxShadow = '';
                 }, 500);
                 
-                // Show feedback
+                // Show notification
                 showNotification('Copied: ' + copyText);
             });
             
-            // Add date label
-            const dateLabel = document.createElement('div');
-            dateLabel.className = 'timeline-date';
-            dateLabel.textContent = formatDate(colorDate);
-            marker.appendChild(dateLabel);
-            
-            timeline.appendChild(marker);
+            swatches.appendChild(swatch);
         });
+        
+        // Add swatches to combo
+        combo.appendChild(swatches);
+        
+        // Add info text
+        const info = document.createElement('div');
+        info.className = 'color-theory-info';
+        info.textContent = `${baseColor.name} ${type}`;
+        combo.appendChild(info);
+        
+        // Add combo to container
+        combosContainer.appendChild(combo);
+    });
+    
+    section.appendChild(combosContainer);
+    container.appendChild(section);
+}
+
+// Get complementary color
+function getComplementaryColors(baseHex) {
+    const hue = getHue(baseHex);
+    const complementaryHue = (hue + 180) % 360;
+    return [getColorFromHue(complementaryHue)];
+}
+
+// Get analogous colors
+function getAnalogousColors(baseHex) {
+    const hue = getHue(baseHex);
+    const hue1 = (hue + 30) % 360;
+    const hue2 = (hue + 330) % 360;
+    return [getColorFromHue(hue1), getColorFromHue(hue2)];
+}
+
+// Get triadic colors
+function getTriadicColors(baseHex) {
+    const hue = getHue(baseHex);
+    const hue1 = (hue + 120) % 360;
+    const hue2 = (hue + 240) % 360;
+    return [getColorFromHue(hue1), getColorFromHue(hue2)];
+}
+
+// Get split complementary colors
+function getSplitComplementaryColors(baseHex) {
+    const hue = getHue(baseHex);
+    const complementaryHue = (hue + 180) % 360;
+    const hue1 = (complementaryHue + 30) % 360;
+    const hue2 = (complementaryHue + 330) % 360;
+    return [getColorFromHue(hue1), getColorFromHue(hue2)];
+}
+
+// Get monochromatic colors
+function getMonochromaticColors(baseHex) {
+    const hue = getHue(baseHex);
+    const sat = getSaturation(baseHex);
+    const light = getLightness(baseHex);
+    
+    // Create lighter and darker versions
+    const lighter = hslToHex(hue, Math.min(sat, 100), Math.min(light + 30, 100));
+    const darker = hslToHex(hue, Math.min(sat, 100), Math.max(light - 30, 0));
+    
+    return [lighter, darker];
+}
+
+// Create a color from a hue value
+function getColorFromHue(hue) {
+    return hslToHex(hue, 70, 50);
+}
+
+// Convert HSL to hex
+function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+}
+
+// Create a color square with animation and info overlay
+function createColorSquare(color, index) {
+    const square = document.createElement('div');
+    square.className = 'color-square';
+    square.style.backgroundColor = color.hex;
+    square.style.animationDelay = `${index * 0.05}s`;
+    
+    // Set title based on original code
+    square.title = color.originalCode || color.hex;
+    
+    // Add info overlay
+    const info = document.createElement('div');
+    info.className = 'color-info';
+    info.textContent = color.originalCode || color.hex;
+    square.appendChild(info);
+    
+    // Add click handler (copy color code)
+    square.addEventListener('click', function() {
+        const copyText = color.originalCode || color.hex.substring(1);
+        navigator.clipboard.writeText(copyText);
+        this.classList.add('color-added');
+        setTimeout(() => {
+            this.classList.remove('color-added');
+        }, 1000);
+        
+        // Show feedback
+        showNotification('Copied: ' + copyText);
+    });
+    
+    return square;
+}
+
+// Update count with animation
+function updateCount() {
+    const oldCount = parseInt(countElement.textContent) || 0;
+    const newCount = colors.length;
+    
+    // Animate count changing
+    if (oldCount !== newCount) {
+        countElement.textContent = oldCount;
+        let current = oldCount;
+        const step = newCount > oldCount ? 1 : -1;
+        const interval = setInterval(() => {
+            current += step;
+            countElement.textContent = current;
+            if (current === newCount) {
+                clearInterval(interval);
+            }
+        }, 50);
+    } else {
+        countElement.textContent = newCount;
+    }
+}
+
+// Format date (e.g., "Jan 1")
+function formatDate(date) {
+    try {
+        const options = { month: 'short', day: 'numeric' };
+        return date.toLocaleDateString(undefined, options);
+    } catch (e) {
+        console.error('Error formatting date:', e, date);
+        return 'Unknown date';
+    }
+}
+
+// Get hue value (0-360) from hex color
+function getHue(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    
+    let hue = 0;
+    if (delta === 0) {
+        return 0;
+    }
+    
+    if (max === r) {
+        hue = ((g - b) / delta) % 6;
+    } else if (max === g) {
+        hue = (b - r) / delta + 2;
+    } else {
+        hue = (r - g) / delta + 4;
+    }
+    
+    hue = Math.round(hue * 60);
+    if (hue < 0) hue += 360;
+    
+    return hue;
+}
+
+// Get saturation (0-100) from hex color
+function getSaturation(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    
+    const lightness = (max + min) / 2;
+    let saturation = 0;
+    
+    if (delta !== 0) {
+        saturation = delta / (1 - Math.abs(2 * lightness - 1));
+    }
+    
+    return Math.round(saturation * 100);
+}
+
+// Get lightness (0-100) from hex color
+function getLightness(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    
+    const lightness = (max + min) / 2;
+    
+    return Math.round(lightness * 100);
+}
+
+// Convert hex to RGB
+function hexToRgb(hex) {
+    try {
+        // Remove # if present
+        hex = hex.replace(/^#/, '');
+        
+        // Parse hex values
+        const bigint = parseInt(hex, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        
+        return { r, g, b };
+    } catch (e) {
+        console.error('Error parsing hex color:', e, hex);
+        return { r: 0, g: 0, b: 0 };
+    }
+} 0 15px white';
+            setTimeout(() => {
+                this.style.boxShadow = '0

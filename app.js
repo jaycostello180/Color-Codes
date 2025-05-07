@@ -181,6 +181,9 @@ async function addNewColorWithProximity(colorData, proximity) {
 window.onload = async function() {
     console.log('Initializing Color Collective...');
     
+    // Fix UI layout issues
+    fixInputLayout();
+    
     // Get DOM elements
     preview = document.getElementById('preview');
     colorInput = document.getElementById('color-code');
@@ -213,7 +216,7 @@ window.onload = async function() {
         }
     }
     
-    // Render the initial view
+    // Render the initial view - skip title page
     renderView();
     updateCount();
     
@@ -245,6 +248,30 @@ window.onload = async function() {
     
     console.log('Initialization complete');
 };
+
+// Fix layout issues
+function fixInputLayout() {
+    // Adjust input container layout
+    const inputContainer = document.querySelector('.input-container');
+    if (inputContainer) {
+        inputContainer.style.flexWrap = 'wrap';
+        
+        // Make sure input group has enough space
+        const inputGroup = document.querySelector('.input-group');
+        if (inputGroup) {
+            inputGroup.style.minWidth = '200px';
+            inputGroup.style.flexGrow = '1';
+            inputGroup.style.flexBasis = '60%';
+        }
+        
+        // Give the button some space
+        const addBtn = document.getElementById('add-btn');
+        if (addBtn) {
+            addBtn.style.minWidth = '100px';
+            addBtn.style.flexShrink = '0'; 
+        }
+    }
+}
 
 // Update color preview and detect format
 function updatePreviewAndFormat() {
@@ -882,18 +909,19 @@ function renderTimelineView() {
         // Set title based on original code
         marker.title = color.originalCode || color.hex;
         
-      marker.addEventListener('click', function() {
-    // Copy original code
-    const copyText = color.originalCode || color.hex.substring(1);
-    navigator.clipboard.writeText(copyText);
-    this.style.boxShadow = '0 0 15px white';
-    setTimeout(() => {
-        this.style.boxShadow = '0 0 5px white';
-    }, 500);
-    
-    // Show feedback
-    showNotification('Copied: ' + copyText);
-});
+        // Add click handler
+        marker.addEventListener('click', function() {
+            // Copy original code
+            const copyText = color.originalCode || color.hex.substring(1);
+            navigator.clipboard.writeText(copyText);
+            this.style.boxShadow = '0 0 15px white';
+            setTimeout(() => {
+                this.style.boxShadow = '0 0 5px white';
+            }, 500);
+            
+            // Show feedback
+            showNotification('Copied: ' + copyText);
+        });
         
         // Add date label
         const dateLabel = document.createElement('div');
@@ -1355,6 +1383,4 @@ function hexToRgb(hex) {
         console.error('Error parsing hex color:', e, hex);
         return { r: 0, g: 0, b: 0 };
     }
-} 0 15px white';
-            setTimeout(() => {
-                this.style.boxShadow = '0
+}

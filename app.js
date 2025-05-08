@@ -212,21 +212,6 @@ async function addNewColorWithProximity(colorData, proximity) {
         return colorData;
     }
 }
-        
-        if (!response.ok) {
-            console.warn('Server save failed, but color was added locally');
-            return newColor;
-        }
-        
-        const result = await response.json();
-        console.log('Color successfully saved to server');
-        return result;
-    } catch (error) {
-        console.error('Error in addNewColorWithProximity:', error);
-        // We already added it locally, so no need to do anything else
-        return colorData;
-    }
-}
 
 // Initialize
 window.onload = async function() {

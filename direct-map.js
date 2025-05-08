@@ -1,4 +1,4 @@
-// direct-map.js - A very direct map implementation
+// direct-map.js - A very direct map implementation with fix for flashing issue
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Direct map script loaded');
   
@@ -10,119 +10,58 @@ document.addEventListener('DOMContentLoaded', function() {
     mapButton.setAttribute('data-view', 'direct-map');
     mapButton.textContent = 'Direct Map';
     
-    mapButton.addEventListener('click', function() {
+    mapButton.addEventListener('click', function(e) {
+      // Prevent any default behavior
+      e.preventDefault();
+      e.stopPropagation();
+      
       // Clear active state from other buttons
       document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
       this.classList.add('active');
       
-      // Show the map
-      showDirectMap();
+      // Set a timeout to ensure it runs after any other view changes
+      setTimeout(() => {
+        showDirectMap();
+      }, 100);
     });
     
     viewControls.appendChild(mapButton);
     console.log('Direct Map button added');
   }
-  
-  // Ensure the addNewColor function saves location data correctly
-  if (typeof window.addNewColor === 'function') {
-    const originalAddNewColor = window.addNewColor;
-    
-    window.addNewColor = async function() {
-      const code = document.getElementById('color-code').value.trim();
-      if (!code) {
-        window.showNotification('Please enter a color code');
-        return;
-      }
-      
-      const normalizedCode = code.startsWith('#') ? code.substring(1) : code;
-      const format = window.detectFormat(normalizedCode);
-      if (!format) {
-        window.showNotification('Unknown color code format');
-        return;
-      }
-      
-      const hexColor = window.convertToHex(normalizedCode, format);
-      if (!hexColor) {
-        window.showNotification('Could not convert color code to hex');
-        return;
-      }
-      
-      let colorName = window.getColorName(hexColor, normalizedCode, format.name);
-      
-      // Ask for location first
-      try {
-        const location = await getCurrentPosition();
-        console.log('Got location:', location);
-        
-        // Create color with location
-        const newColor = {
-          hex: hexColor,
-          originalCode: normalizedCode,
-          name: colorName,
-          location: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude
-          }
-        };
-        
-        console.log('Created color with location:', newColor);
-        
-        // Continue with original flow
-        window.showColorSpotlight(newColor);
-        
-        // Clear input
-        document.getElementById('color-code').value = '';
-        document.getElementById('preview').style.backgroundColor = '';
-        document.getElementById('format-display').textContent = '';
-      } catch (error) {
-        console.log('Error getting location or user declined:', error);
-        
-        // Create color without location
-        const newColor = {
-          hex: hexColor,
-          originalCode: normalizedCode,
-          name: colorName
-        };
-        
-        // Continue with original flow
-        window.showColorSpotlight(newColor);
-        
-        // Clear input
-        document.getElementById('color-code').value = '';
-        document.getElementById('preview').style.backgroundColor = '';
-        document.getElementById('format-display').textContent = '';
-      }
-    };
-    
-    console.log('Enhanced addNewColor function to save location');
-  }
 });
-
-// Get current position (location)
-function getCurrentPosition() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation not supported'));
-      return;
-    }
-    
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    });
-  });
-}
 
 // Show the direct map
 function showDirectMap() {
   console.log('Showing direct map');
   
+  // Get and clear the view container
   const viewContainer = document.getElementById('view-container');
+  if (!viewContainer) {
+    console.error('View container not found');
+    return;
+  }
+  
+  // Clear any existing content
   viewContainer.innerHTML = '';
+  
+  // Set a flag on the window to indicate we're showing the direct map
+  window.currentView = 'direct-map';
+  
+  // Make sure no other view takes over
+  const originalRenderView = window.renderView;
+  if (originalRenderView) {
+    window.renderView = function() {
+      if (window.currentView === 'direct-map') {
+        console.log('Keeping direct map visible');
+        return;
+      }
+      return originalRenderView.apply(this, arguments);
+    };
+  }
   
   // Add map container
   const mapContainer = document.createElement('div');
+  mapContainer.id = 'map-container';
   mapContainer.style.width = '100%';
   mapContainer.style.height = '600px';
   mapContainer.style.backgroundColor = '#1a1a1a';
@@ -139,7 +78,7 @@ function showDirectMap() {
   
   if (colorsWithLocation.length === 0) {
     mapContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white;">
         <h3>No Colors with Location Data</h3>
         <p>Add a color with location data to see it on the map.</p>
         <button id="add-test-color" style="padding: 10px 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 5px; cursor: pointer; margin-top: 15px;">Add Test Color</button>
@@ -147,10 +86,13 @@ function showDirectMap() {
     `;
     
     // Add event listener for test color button
-    document.getElementById('add-test-color').addEventListener('click', function() {
-      addTestColor();
-      showDirectMap();
-    });
+    const addButton = document.getElementById('add-test-color');
+    if (addButton) {
+      addButton.addEventListener('click', function() {
+        addTestColor();
+        showDirectMap();
+      });
+    }
     
     return;
   }
@@ -212,7 +154,7 @@ function showDirectMap() {
     .catch(error => {
       console.error('Error loading Leaflet:', error);
       mapContainer.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white;">
           <h3>Could Not Load Map</h3>
           <p>Error: ${error.message}</p>
         </div>
@@ -257,7 +199,11 @@ function addTestColor() {
   }
   
   console.log('Test color added:', testColor);
-  window.showNotification('Test color added to map');
+  if (typeof window.showNotification === 'function') {
+    window.showNotification('Test color added to map');
+  } else {
+    alert('Test color added to map');
+  }
   
   return testColor;
 }

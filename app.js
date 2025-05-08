@@ -109,27 +109,56 @@ function loadColorsFromStorage() {
     return null;
 }
 
-// Function to fetch colors from the serverless function
+// Function to fetch colors from the database
 async function fetchColors() {
     try {
-        console.log('Attempting to fetch colors from server...');
-        const response = await fetch('/.netlify/functions/getColors');
+        console.log('Attempting to fetch colors from Firebase...');
         
-        if (!response.ok) {
-            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        // Try to get colors from Firebase
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            const snapshot = await db.collection('colors').orderBy('dateAdded').get();
+            
+            if (!snapshot.empty) {
+                console.log('Successfully fetched', snapshot.size, 'colors from Firebase');
+                
+                // Convert to the format expected by the app
+                const fetchedColors = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    fetchedColors.push({
+                        hex: data.hex,
+                        originalCode: data.originalCode,
+                        name: data.name,
+                        proximity: data.proximity || 'neutral',
+                        dateAdded: data.dateAdded.toDate(), // Convert Firestore timestamp to JS Date
+                        location: data.location || getRandomLocation()
+                    });
+                });
+                
+                return fetchedColors;
+            } else {
+                console.log('No colors found in Firebase, using default or localStorage');
+            }
+        } else {
+            console.log('Firebase not available, using localStorage');
         }
         
-        const data = await response.json();
-        console.log('Successfully fetched', data.length, 'colors from server');
+        // If Firebase failed or returned no results, try localStorage
+        const storedColors = loadColorsFromStorage();
+        if (storedColors && storedColors.length > 0) {
+            console.log('Using', storedColors.length, 'colors from localStorage');
+            return storedColors;
+        }
         
-        // Convert date strings to Date objects
-        return data.map(color => ({
-            ...color,
-            dateAdded: new Date(color.dateAdded)
-        }));
+        // If all else fails, use default colors
+        console.log('Using default color set');
+        return colors;
     } catch (error) {
-        console.error('Error fetching colors from server:', error);
-        return null;
+        console.error('Error fetching colors:', error);
+        
+        // Fall back to localStorage or defaults
+        const storedColors = loadColorsFromStorage();
+        return storedColors && storedColors.length > 0 ? storedColors : colors;
     }
 }
 
@@ -147,20 +176,42 @@ async function addNewColorWithProximity(colorData, proximity) {
         
         colors.push(newColor);
         
-        // Save to localStorage
+        // Save to localStorage as backup
         saveColorsToStorage();
         
-        // Then try to save to server
-        const response = await fetch('/.netlify/functions/addColor', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ...colorData,
-                proximity
-            })
-        });
+        // Try to save to Firebase if available
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            try {
+                // Create a proper location object for the galaxy view
+                const location = getRandomLocation();
+                
+                // Prepare the color data for Firebase
+                const firestoreData = {
+                    hex: colorData.hex,
+                    originalCode: colorData.originalCode,
+                    name: colorData.name,
+                    proximity: proximity,
+                    dateAdded: firebase.firestore.Timestamp.fromDate(new Date()),
+                    location: location
+                };
+                
+                // Add to Firestore
+                await db.collection('colors').add(firestoreData);
+                console.log('Color successfully saved to Firebase');
+            } catch (firebaseError) {
+                console.warn('Firebase save failed, but color was added locally:', firebaseError);
+            }
+        } else {
+            console.log('Firebase not available, color saved to localStorage only');
+        }
+        
+        return newColor;
+    } catch (error) {
+        console.error('Error in addNewColorWithProximity:', error);
+        // We already added it locally, so no need to do anything else
+        return colorData;
+    }
+}
         
         if (!response.ok) {
             console.warn('Server save failed, but color was added locally');

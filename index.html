@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Collection</title>
+    <title>Chromatic Collective</title>
     <style>
         body {
             background-color: #111;
@@ -254,7 +254,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="title">Color Collective</div>
+            <div class="title">Chromatic Collective</div>
             <div class="count-container">
                 <div class="count-label">Colors Collected:</div>
                 <div id="count" class="count">0</div>
@@ -283,26 +283,29 @@
     
     <div id="notification" class="notification"></div>
     
+    <!-- First, load Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Initialize Firebase -->
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCyJNQ3wTKg8FFn7q7p1xp3CW0mneDQbo",
+        authDomain: "color-codes-a0532.firebaseapp.com",
+        projectId: "color-codes-a0532",
+        storageBucket: "color-codes-a0532.firebasestorage.app",
+        messagingSenderId: "893838841464",
+        appId: "1:893838841464:web:8b4b73b0322da7eb3abf8d"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      console.log("Firebase initialized successfully");
+    </script>
+    
+    <!-- Then, load your app -->
     <script src="app.js"></script>
-    <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-<!-- Initialize Firebase -->
-<script>
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCyJNQ3wTKg8FFn7q7p1xp3CW0mneDQbo",
-    authDomain: "color-codes-a0532.firebaseapp.com",
-    projectId: "color-codes-a0532",
-    storageBucket: "color-codes-a0532.firebasestorage.app",
-    messagingSenderId: "893838841464",
-    appId: "1:893838841464:web:8b4b73b0322da7eb3abf8d"
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
 </body>
 </html>

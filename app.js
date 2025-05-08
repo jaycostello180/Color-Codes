@@ -80,6 +80,20 @@ let preview, colorInput, formatDisplay, addBtn, viewContainer, countElement, vie
 // Current view
 let currentView = 'grid';
 
+// Helper function to generate a random location for the galaxy view
+function getRandomLocation() {
+  const locations = [
+    { name: "Inner Core", x: 0.2, y: 0.3 },
+    { name: "Middle Ring", x: 0.3, y: 0.4 },
+    { name: "Outer Reaches", x: 0.4, y: 0.5 },
+    { name: "Tech Sector", x: 0.5, y: 0.2 },
+    { name: "Artistic District", x: 0.7, y: 0.3 },
+    { name: "Historic Region", x: 0.8, y: 0.2 }
+  ];
+  
+  return locations[Math.floor(Math.random() * locations.length)];
+}
+
 // LocalStorage functions
 function saveColorsToStorage() {
     try {
@@ -116,6 +130,7 @@ async function fetchColors() {
         
         // Try to get colors from Firebase
         if (typeof firebase !== 'undefined' && firebase.firestore) {
+            console.log('Firebase is defined, getting colors collection...');
             const snapshot = await db.collection('colors').orderBy('dateAdded').get();
             
             if (!snapshot.empty) {
@@ -125,6 +140,7 @@ async function fetchColors() {
                 const fetchedColors = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    console.log('Processing color from Firebase:', data);
                     fetchedColors.push({
                         hex: data.hex,
                         originalCode: data.originalCode,
@@ -182,8 +198,11 @@ async function addNewColorWithProximity(colorData, proximity) {
         // Try to save to Firebase if available
         if (typeof firebase !== 'undefined' && firebase.firestore) {
             try {
+                console.log('Firebase available, attempting to save color...');
+                
                 // Create a proper location object for the galaxy view
                 const location = getRandomLocation();
+                console.log('Generated location:', location);
                 
                 // Prepare the color data for Firebase
                 const firestoreData = {
@@ -194,33 +213,21 @@ async function addNewColorWithProximity(colorData, proximity) {
                     dateAdded: firebase.firestore.Timestamp.fromDate(new Date()),
                     location: location
                 };
+                console.log('Prepared data for Firebase:', firestoreData);
                 
                 // Add to Firestore
+                console.log('Sending to Firebase...');
                 await db.collection('colors').add(firestoreData);
                 console.log('Color successfully saved to Firebase');
             } catch (firebaseError) {
-                console.warn('Firebase save failed, but color was added locally:', firebaseError);
+                console.error('Firebase save error details:', firebaseError);
+                console.warn('Firebase save failed, but color was added locally');
             }
         } else {
             console.log('Firebase not available, color saved to localStorage only');
         }
         
         return newColor;
-    } catch (error) {
-        console.error('Error in addNewColorWithProximity:', error);
-        // We already added it locally, so no need to do anything else
-        return colorData;
-    }
-}
-        
-        if (!response.ok) {
-            console.warn('Server save failed, but color was added locally');
-            return newColor;
-        }
-        
-        const result = await response.json();
-        console.log('Color successfully saved to server');
-        return result;
     } catch (error) {
         console.error('Error in addNewColorWithProximity:', error);
         // We already added it locally, so no need to do anything else
@@ -248,20 +255,20 @@ window.onload = async function() {
     // Add CSS for color spotlight to head
     addSpotlightStyles();
     
-    // Try to load colors from localStorage first
-    const storedColors = loadColorsFromStorage();
-    
-    if (storedColors && storedColors.length > 0) {
-        colors = storedColors;
-        console.log('Using colors from localStorage');
+    // Try to fetch from Firebase first
+    console.log('Trying to fetch colors from Firebase first...');
+    const serverColors = await fetchColors();
+    if (serverColors && serverColors.length > 0) {
+        colors = serverColors;
+        console.log('Using colors from Firebase');
+        // Save to localStorage as backup
+        saveColorsToStorage();
     } else {
-        // If no localStorage, try server
-        const serverColors = await fetchColors();
-        if (serverColors && serverColors.length > 0) {
-            colors = serverColors;
-            console.log('Using colors from server');
-            // Save to localStorage for next time
-            saveColorsToStorage();
+        // If Firebase failed, try localStorage
+        const storedColors = loadColorsFromStorage();
+        if (storedColors && storedColors.length > 0) {
+            colors = storedColors;
+            console.log('Using colors from localStorage');
         } else {
             console.log('Using default color set');
         }
@@ -296,6 +303,19 @@ window.onload = async function() {
             }, 300);
         });
     });
+    
+    // Test Firebase connection at the end
+    console.log('Testing Firebase connection directly...');
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+        try {
+            const testResult = await db.collection('colors').limit(1).get();
+            console.log('Firebase test successful, document count:', testResult.size);
+        } catch (testError) {
+            console.error('Firebase test failed:', testError);
+        }
+    } else {
+        console.log('Firebase not available for testing');
+    }
     
     console.log('Initialization complete');
 };
@@ -743,6 +763,7 @@ function showColorSpotlight(color) {
     buttons.forEach(button => {
         button.addEventListener('click', async () => {
             const proximity = button.dataset.proximity;
+            console.log('Proximity button clicked:', proximity);
             
             // Save color with proximity
             await addNewColorWithProximity(color, proximity);

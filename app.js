@@ -233,24 +233,24 @@ window.onload = async function() {
     // Add CSS for color spotlight to head
     addSpotlightStyles();
     
-    // Try to load colors from localStorage first
+ // Try to fetch from Firebase first
+console.log('Trying to fetch colors from Firebase first...');
+const serverColors = await fetchColors();
+if (serverColors && serverColors.length > 0) {
+    colors = serverColors;
+    console.log('Using colors from Firebase');
+    // Save to localStorage as backup
+    saveColorsToStorage();
+} else {
+    // If Firebase failed, try localStorage
     const storedColors = loadColorsFromStorage();
-    
     if (storedColors && storedColors.length > 0) {
         colors = storedColors;
         console.log('Using colors from localStorage');
     } else {
-        // If no localStorage, try server
-        const serverColors = await fetchColors();
-        if (serverColors && serverColors.length > 0) {
-            colors = serverColors;
-            console.log('Using colors from server');
-            // Save to localStorage for next time
-            saveColorsToStorage();
-        } else {
-            console.log('Using default color set');
-        }
+        console.log('Using default color set');
     }
+}
     
     // Render the initial view - skip title page
     renderView();

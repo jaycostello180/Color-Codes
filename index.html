@@ -57,11 +57,11 @@
             100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.7); }
         }
         
-        /* Fixed input container layout */
+        /* Fixed input container layout - modified to fix overlap */
         .input-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 20px;
         }
         
@@ -79,7 +79,7 @@
         .input-group {
             flex: 1;
             position: relative;
-            min-width: 0;
+            max-width: calc(100% - 200px); /* Ensure there's space for the button */
         }
         
         #color-code {
@@ -91,6 +91,7 @@
             color: cyan;
             font-family: monospace;
             font-size: 16px;
+            box-sizing: border-box;
         }
         
         #format-display {
@@ -117,6 +118,7 @@
             box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
             flex-shrink: 0;
             white-space: nowrap;
+            min-width: 120px; /* Ensure button maintains minimum width */
         }
         
         .btn:hover {
@@ -155,30 +157,27 @@
             transition: opacity 0.3s ease;
         }
         
-        /* Seamless color grid */
+        /* Restoring original grid with spacing */
         .color-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 0;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px; /* Restored gap from original */
         }
         
         .color-square {
-            height: 80px;
-            border-radius: 0;
+            height: 100px;
+            border-radius: 5px; /* Restored border radius */
             cursor: pointer;
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
             animation: fadeIn 0.5s ease-out forwards;
             opacity: 0;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.2); /* Added subtle shadow */
         }
         
         .color-square:hover {
             transform: scale(1.05);
-            z-index: 10;
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
         
@@ -373,6 +372,7 @@
             
             .input-group {
                 min-width: 100%;
+                max-width: 100%;
                 order: 1;
                 margin-bottom: 10px;
             }
@@ -420,7 +420,7 @@
             <button class="view-btn active" data-view="grid">Grid View</button>
             <button class="view-btn" data-view="spectrum">Spectrum</button>
             <button class="view-btn" data-view="timeline">Timeline</button>
-            <button class="view-btn" data-view="map">Galaxy View</button>
+            <button class="view-btn" data-view="galaxy">Galaxy View</button>
             <button class="view-btn" data-view="theory">Color Theory</button>
         </div>
         

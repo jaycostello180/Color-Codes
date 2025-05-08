@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -395,3 +397,62 @@
         }
     </style>
 </head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Chromatic Collective</div>
+            <div class="count-container">
+                <div class="count-label">Colors Collected:</div>
+                <div id="count" class="count">0</div>
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <div id="preview" class="color-preview"></div>
+            <div class="input-group">
+                <input type="text" id="color-code" placeholder="Enter a color code (HEX, Valspar, Nissan, etc)">
+                <div id="format-display"></div>
+            </div>
+            <button id="add-btn" class="btn">Add Color</button>
+        </div>
+        
+        <div class="view-controls">
+            <button class="view-btn active" data-view="grid">Grid View</button>
+            <button class="view-btn" data-view="spectrum">Spectrum</button>
+            <button class="view-btn" data-view="timeline">Timeline</button>
+            <button class="view-btn" data-view="map">Galaxy View</button>
+            <button class="view-btn" data-view="theory">Color Theory</button>
+        </div>
+        
+        <div id="view-container" class="view-container"></div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <!-- First, load Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Initialize Firebase -->
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCyJNQ3wTKg8FFn7q7p1xp3CW0mneDQbo",
+        authDomain: "color-codes-a0532.firebaseapp.com",
+        projectId: "color-codes-a0532",
+        storageBucket: "color-codes-a0532.firebasestorage.app",
+        messagingSenderId: "893838841464",
+        appId: "1:893838841464:web:8b4b73b0322da7eb3abf8d"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      console.log("Firebase initialized successfully");
+    </script>
+    
+    <!-- Then, load your app -->
+    <script src="app.js"></script>
+    <script src="enhancements.js"></script>
+</body>
+</html>

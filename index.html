@@ -1,28 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
-    <style>
-  /* Fix the input field layout */
-  .input-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .input-group {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  #color-code {
-    width: 100%;
-  }
-  
-  #add-btn {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chromatic Collective</title>
@@ -40,9 +16,10 @@
             margin: 0 auto;
         }
         
+        /* Updated header styles - hide title */
         .header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             margin-bottom: 20px;
             border-bottom: 1px solid rgba(0, 255, 255, 0.3);
@@ -50,8 +27,7 @@
         }
         
         .title {
-            font-size: 24px;
-            color: cyan;
+            display: none;
         }
         
         .count-container {
@@ -64,31 +40,44 @@
             font-size: 14px;
         }
         
+        /* Enhanced count with glow effect */
         .count {
             background-color: rgba(0, 255, 255, 0.1);
             padding: 5px 10px;
             border-radius: 5px;
             border: 1px solid rgba(0, 255, 255, 0.3);
             font-size: 16px;
+            animation: pulse-glow 4s infinite alternate;
         }
         
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+            100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.7); }
+        }
+        
+        /* Fixed input container layout */
         .input-container {
             display: flex;
+            align-items: center;
             gap: 10px;
             margin-bottom: 20px;
-            align-items: center;
         }
         
+        /* Enhanced color preview with glow */
         .color-preview {
             width: 40px;
             height: 40px;
             border-radius: 5px;
             border: 1px solid rgba(0, 255, 255, 0.3);
+            flex-shrink: 0;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+            transition: all 0.3s ease;
         }
         
         .input-group {
-            flex-grow: 1;
+            flex: 1;
             position: relative;
+            min-width: 0;
         }
         
         #color-code {
@@ -111,6 +100,7 @@
             opacity: 0.7;
         }
         
+        /* Enhanced buttons with glow effects */
         .btn {
             padding: 10px 15px;
             background-color: rgba(0, 255, 255, 0.1);
@@ -120,11 +110,17 @@
             cursor: pointer;
             font-family: monospace;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+            flex-shrink: 0;
+            white-space: nowrap;
         }
         
         .btn:hover {
             background-color: rgba(0, 255, 255, 0.2);
             transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
         }
         
         .view-controls {
@@ -143,33 +139,45 @@
             cursor: pointer;
             font-family: monospace;
             transition: all 0.3s ease;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
         }
         
         .view-btn:hover, .view-btn.active {
             background-color: rgba(0, 255, 255, 0.2);
             color: cyan;
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
         }
         
         .view-container {
             transition: opacity 0.3s ease;
         }
         
+        /* Seamless color grid */
         .color-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }
         
         .color-square {
-            height: 100px;
-            border-radius: 5px;
+            height: 80px;
+            border-radius: 0;
             cursor: pointer;
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
             animation: fadeIn 0.5s ease-out forwards;
             opacity: 0;
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+        }
+        
+        .color-square:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
         
         @keyframes fadeIn {
@@ -189,11 +197,6 @@
             text-align: center;
             transform: translateY(100%);
             transition: transform 0.3s ease;
-        }
-        
-        .color-square:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
         }
         
         .color-square:hover .color-info {
@@ -223,6 +226,7 @@
             top: 50%;
             height: 2px;
             background-color: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
         }
         
         .timeline-marker {
@@ -241,6 +245,7 @@
         
         .timeline-marker:hover {
             transform: translate(-50%, -50%) scale(1.2);
+            box-shadow: 0 0 15px white;
         }
         
         .timeline-date {
@@ -266,68 +271,127 @@
             font-family: monospace;
             transition: bottom 0.3s ease;
             z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
         }
         
         .notification.show {
             bottom: 20px;
+            animation: notification-glow 2s infinite alternate;
+        }
+        
+        @keyframes notification-glow {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+            100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.7); }
+        }
+        
+        /* Color detail modal styles */
+        .color-detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .color-detail-modal.show {
+            opacity: 1;
+        }
+        
+        .color-detail-content {
+            background-color: #111;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .color-detail-modal.show .color-detail-content {
+            transform: translateY(0);
+        }
+        
+        .color-detail-swatch {
+            height: 150px;
+        }
+        
+        .color-detail-info {
+            padding: 20px;
+            color: cyan;
+        }
+        
+        .color-detail-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        
+        .color-detail-name {
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+        
+        .color-detail-code {
+            font-family: monospace;
+            background: rgba(0, 255, 255, 0.1);
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        
+        .color-detail-info p {
+            margin: 5px 0;
+            opacity: 0.8;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .input-container {
+                flex-wrap: wrap;
+            }
+            
+            .input-group {
+                min-width: 100%;
+                order: 1;
+                margin-bottom: 10px;
+            }
+            
+            .color-preview {
+                order: 0;
+            }
+            
+            #add-btn {
+                order: 2;
+                width: 100%;
+            }
+            
+            .view-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .view-btn {
+                margin-bottom: 5px;
+            }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="title">Chromatic Collective</div>
-            <div class="count-container">
-                <div class="count-label">Colors Collected:</div>
-                <div id="count" class="count">0</div>
-            </div>
-        </div>
-        
-        <div class="input-container">
-            <div id="preview" class="color-preview"></div>
-            <div class="input-group">
-                <input type="text" id="color-code" placeholder="Enter a color code (HEX, Valspar, Nissan, etc)">
-                <div id="format-display"></div>
-            </div>
-            <button id="add-btn" class="btn">Add Color</button>
-        </div>
-        
-        <div class="view-controls">
-            <button class="view-btn active" data-view="grid">Grid View</button>
-            <button class="view-btn" data-view="spectrum">Spectrum</button>
-            <button class="view-btn" data-view="timeline">Timeline</button>
-            <button class="view-btn" data-view="map">Galaxy View</button>
-            <button class="view-btn" data-view="relationship">Color Theory</button>
-        </div>
-        
-        <div id="view-container" class="view-container"></div>
-    </div>
-    
-    <div id="notification" class="notification"></div>
-    
-    <!-- First, load Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-    <!-- Initialize Firebase -->
-    <script>
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyCyJNQ3wTKg8FFn7q7p1xp3CW0mneDQbo",
-        authDomain: "color-codes-a0532.firebaseapp.com",
-        projectId: "color-codes-a0532",
-        storageBucket: "color-codes-a0532.firebasestorage.app",
-        messagingSenderId: "893838841464",
-        appId: "1:893838841464:web:8b4b73b0322da7eb3abf8d"
-      };
-
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.firestore();
-      console.log("Firebase initialized successfully");
-    </script>
-    
-    <!-- Then, load your app -->
-    <script src="app.js"></script>
-</body>
-</html>

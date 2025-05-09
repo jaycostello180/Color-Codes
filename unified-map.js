@@ -21,7 +21,57 @@
     
     // Load Leaflet CSS early
     loadLeafletCSS();
+    
+    // Fix other view buttons to ensure they work after map view
+    fixOtherViewButtons();
   });
+  
+  // Fix other view buttons to make sure they work after map view
+  function fixOtherViewButtons() {
+    // Get all view buttons
+    const viewButtons = document.querySelectorAll('.view-btn');
+    
+    // Add click handlers that properly switch views
+    viewButtons.forEach(button => {
+      // Skip our map button
+      if (button.getAttribute('data-view') === 'unified-map') {
+        return;
+      }
+      
+      // Store original onclick if it exists
+      const originalOnClick = button.onclick;
+      
+      // Set new onclick handler
+      button.onclick = function(e) {
+        // Prevent default
+        e.preventDefault();
+        
+        // Update active state
+        document.querySelectorAll('.view-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        this.classList.add('active');
+        
+        // Get view name
+        const view = this.getAttribute('data-view');
+        
+        // Set current view
+        window.currentView = view;
+        
+        // Call original handler if it exists
+        if (originalOnClick) {
+          originalOnClick.call(this, e);
+        } else {
+          // Otherwise use the app's renderView function
+          if (typeof window.renderView === 'function') {
+            window.renderView();
+          }
+        }
+      };
+    });
+    
+    console.log('Fixed other view buttons to work properly');
+  }
   
   // Add map button
   function addMapButton() {
